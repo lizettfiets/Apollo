@@ -20,14 +20,14 @@
 
 package com.apollocurrency.aplwallet.apl.util;
 
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.AppenderBase;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.AppenderBase;
+
 /**
- * MemoryAppender maintains a ring buffer of log messages.  The GetLog API is used
+ * MemoryAppender maintains a ring buffer of log messages. The GetLog API is used
  * to retrieve these log messages.
  *
  * The following logging.properties entries are used:

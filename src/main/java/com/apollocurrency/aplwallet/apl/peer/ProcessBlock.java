@@ -25,6 +25,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 import com.apollocurrency.aplwallet.apl.Apl;
 import com.apollocurrency.aplwallet.apl.AplException;
 import com.apollocurrency.aplwallet.apl.Block;
+import com.apollocurrency.aplwallet.apl.BlockImpl;
 import com.apollocurrency.aplwallet.apl.util.Convert;
 import com.apollocurrency.aplwallet.apl.util.JSON;
 import org.json.simple.JSONObject;
@@ -50,6 +51,7 @@ final class ProcessBlock extends PeerServlet.PeerRequestHandler {
         Block lastBlock = Apl.getBlockchain().getLastBlock();
         long peerBlockTimestamp = Convert.parseLong(request.get("timestamp"));
         Object timeoutJsonValue = request.get("timeout");
+
         int peerBlockTimeout =  timeoutJsonValue == null ? 0 : ((Long)timeoutJsonValue).intValue();
         if (lastBlock.getStringId().equals(previousBlockId) ||
                 (Convert.parseUnsignedLong(previousBlockId) == lastBlock.getPreviousBlockId()
@@ -57,7 +59,13 @@ final class ProcessBlock extends PeerServlet.PeerRequestHandler {
                         peerBlockTimestamp == lastBlock.getTimestamp() && peerBlockTimeout > lastBlock.getTimeout()))) {
             Peers.peersService.submit(() -> {
                 try {
-                    LOG.debug("API: need to process better peer block");
+                    try {
+                        BlockImpl block = (BlockImpl) BlockImpl.parseBlock(request);
+                        LOG.trace("FDL:ProcessBlock:processBlockRequest[{}]", block);
+                    }
+                    catch (AplException.NotValidException e) {
+                        e.printStackTrace();
+                    }
                     Apl.getBlockchainProcessor().processPeerBlock(request);
                 } catch (AplException | RuntimeException e) {
                     if (peer != null) {

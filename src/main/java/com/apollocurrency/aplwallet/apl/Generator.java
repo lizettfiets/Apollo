@@ -62,7 +62,7 @@ public final class Generator implements Comparable<Generator> {
     private static volatile List<Generator> sortedForgers = null;
     private static long lastBlockId;
     private static int delayTime = Constants.FORGING_DELAY;
-
+    private static final String PREFIX = "FDL:Forging";
     private static final Runnable generateBlocksThread = new Runnable() {
 
         private volatile boolean logged;
@@ -91,6 +91,7 @@ public final class Generator implements Comparable<Generator> {
                                     if (timestamp != generationLimit && generator.getHitTime() > 0 && timestamp < lastBlock.getTimestamp() - lastBlock.getTimeout()) {
                                         LOG.debug("Pop off: " + generator.toString() + " will pop off last block " + lastBlock.getStringId());
                                         List<BlockImpl> poppedOffBlock = BlockchainProcessorImpl.getInstance().popOffTo(previousBlock);
+                                        LOG.trace("{}popOffBadLastBlocks[{}-{}-poppedOffBlocks={}]",PREFIX, lastBlock, generator, poppedOffBlock.size());
                                         for (BlockImpl block : poppedOffBlock) {
                                             TransactionProcessorImpl.getInstance().processLater(block.getTransactions());
                                         }
@@ -167,6 +168,7 @@ public final class Generator implements Comparable<Generator> {
             LOG.debug(old + " is already forging");
             return old;
         }
+        LOG.trace("{}:startForging[generator={}]", PREFIX, Convert.rsAccount(generator.getAccountId()));
         listeners.notify(generator, Event.START_FORGING);
         LOG.debug(generator + " started");
         return generator;
@@ -241,8 +243,11 @@ public final class Generator implements Comparable<Generator> {
     static void setDelay(int delay) {
         Generator.delayTime = delay;
     }
-
     static boolean verifyHit(BigInteger hit, BigInteger effectiveBalance, Block previousBlock, int timestamp) {
+        return verifyHit(hit, effectiveBalance, previousBlock, timestamp, PREFIX);
+    }
+
+    static boolean verifyHit(BigInteger hit, BigInteger effectiveBalance, Block previousBlock, int timestamp, String debugPrefix) {
         int elapsedTime = timestamp - previousBlock.getTimestamp();
         if (elapsedTime <= 0) {
             return false;
@@ -250,6 +255,8 @@ public final class Generator implements Comparable<Generator> {
         BigInteger effectiveBaseTarget = BigInteger.valueOf(previousBlock.getBaseTarget()).multiply(effectiveBalance);
         BigInteger prevTarget = effectiveBaseTarget.multiply(BigInteger.valueOf(elapsedTime - 1));
         BigInteger target = prevTarget.add(effectiveBaseTarget);
+        LOG.trace("{}:verifyHit[elapsedTime={};effectiveBaseTarget={};prevTarget={};target={}]", debugPrefix, elapsedTime, effectiveBaseTarget, prevTarget
+                , target);
         return hit.compareTo(target) < 0
                 && (hit.compareTo(prevTarget) >= 0
                 || (AplGlobalObjects.getChainConfig().isTestnet() ? elapsedTime > 300 : elapsedTime > 3600)
@@ -332,7 +339,12 @@ public final class Generator implements Comparable<Generator> {
 
     @Override
     public String toString() {
-        return "Forger " + Long.toUnsignedString(accountId) + " deadline " + getDeadline() + " hit " + hitTime;
+        return
+                "accountId=" + accountId +
+                ";hitTime=" + hitTime +
+                ";hit=" + hit +
+                ";effectiveBalance=" + effectiveBalance +
+                ";deadline=" + deadline;
     }
 
     private void setLastBlock(Block lastBlock) {
@@ -351,16 +363,20 @@ public final class Generator implements Comparable<Generator> {
         hit = getHit(publicKey, lastBlock);
         hitTime = getHitTime(effectiveBalance, hit, lastBlock);
         deadline = Math.max(hitTime - lastBlock.getTimestamp(), 0);
+        LOG.trace("{}:GeneratorReceivedNewLastBlock[{};{}]", PREFIX, this, lastBlock);
         listeners.notify(this, Event.GENERATION_DEADLINE);
     }
 
     boolean forge(Block lastBlock, int generationLimit) throws BlockchainProcessor.BlockNotAcceptedException {
+        LOG.trace("{}:startForgeAttempt[generationLimit={}]", PREFIX, generationLimit);
         int timestamp = getTimestamp(generationLimit);
+        LOG.trace("{}:gotForgingBlockTimestamp[timestamp={}]", PREFIX, timestamp);
         int[] timeoutAndVersion = getBlockTimeoutAndVersion(timestamp, generationLimit, lastBlock);
         if (timeoutAndVersion == null) {
             return false;
         }
         int timeout = timeoutAndVersion[0];
+        LOG.trace("{}:timeoutAndVersion[timeout={};version={}]", PREFIX, timeoutAndVersion[0], timeoutAndVersion[1]);
         if (!verifyHit(hit, effectiveBalance, lastBlock, timestamp)) {
             LOG.debug(this.toString() + " failed to forge at " + (timestamp + timeout) + " height " + lastBlock.getHeight() + " " +
                     "last " +
@@ -370,7 +386,8 @@ public final class Generator implements Comparable<Generator> {
         int start = Apl.getEpochTime();
         while (true) {
             try {
-                BlockchainProcessorImpl.getInstance().generateBlock(keySeed, timestamp  + timeout, timeout, timeoutAndVersion[1]);
+
+                BlockchainProcessorImpl.getInstance().generateBlock(keySeed, timestamp  + timeout, timeout, timeoutAndVersion[1], PREFIX);
                 setDelay(Constants.FORGING_DELAY);
                 return true;
             }
@@ -385,7 +402,7 @@ public final class Generator implements Comparable<Generator> {
 
     /**
      * Return block timestamp shift
-     * @return 0 - when adaptive forging is disabled or forging process should be continued
+     * @return  0 - when adaptive forging is disabled or forging process should be continued
      *         -1 - when adaptive forging is enabled and forging process should be terminated for current attempt
      *         >0 - when adaptive forging is enabled and new block should be generated with timestamp = calculated timestamp + returned value
      */

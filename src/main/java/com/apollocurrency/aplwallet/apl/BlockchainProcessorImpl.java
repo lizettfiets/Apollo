@@ -76,6 +76,8 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
             null;
 
     private static final BlockchainProcessorImpl instance = new BlockchainProcessorImpl(new DefaultBlockValidator());
+    private static final String DOWNLOAD_PREFIX = "FDL:DownloadBlockchain";
+    private static final String FORK_PREFIX =  "FDL:ProcessFork";
 
 
     public static BlockchainProcessorImpl getInstance() {
@@ -187,6 +189,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                     return;
                 }
                 BigInteger betterCumulativeDifficulty = new BigInteger(peerCumulativeDifficulty);
+//                LOG.trace("{}:ComparingOurAndPeersDiff[ourDiff={};peerDiff={}]", DOWNLOAD_PREFIX, curCumulativeDifficulty, betterCumulativeDifficulty);
                 if (betterCumulativeDifficulty.compareTo(curCumulativeDifficulty) < 0) {
                     return;
                 }
@@ -235,6 +238,12 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
 
                 blockchain.updateLock();
                 try {
+                    LOG.trace("{}:GotMilestoneBlock[{}]", DOWNLOAD_PREFIX, Apl.getBlockchain().getBlock(commonMilestoneBlockId));
+                    LOG.trace("{}:ComparingHeights[peerHeight={};ourHeight={}]", DOWNLOAD_PREFIX, lastBlockchainFeederHeight,
+                            Apl.getBlockchain().getHeight());
+                    LOG.trace("{}:CommonBlock[{}]", DOWNLOAD_PREFIX, commonBlock);
+                    LOG.trace("{}:ComparingOurAndPeersDiffAfterLock[ourDiff={};peerDiff={}]", DOWNLOAD_PREFIX, curCumulativeDifficulty,
+                            betterCumulativeDifficulty);
                     if (betterCumulativeDifficulty.compareTo(blockchain.getLastBlock().getCumulativeDifficulty()) <= 0) {
                         return;
                     }
@@ -303,7 +312,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
 
         /**
          * Get first mutual block which peer has in blockchain and we have in blockchain
-         * @param peer - blockchain node with which we will retrieve first mutual block
+         * @param peer - node which will supply us with possible mutual blocks
          * @return id of the first mutual block
          */
         private long getCommonMilestoneBlockId(Peer peer) {
@@ -421,6 +430,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
          */
         private void downloadBlockchain(final Peer feederPeer, final Block commonBlock, final int startHeight) throws InterruptedException {
             Map<Long, PeerBlock> blockMap = new HashMap<>();
+            LOG.trace("{}:StartDownload[peer={}]:", DOWNLOAD_PREFIX, feederPeer.getHost());
             //
             // Break the download into multiple segments.  The first block in each segment
             // is the common block for that segment.
@@ -523,12 +533,14 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                     if (peerBlock == null) {
                         break;
                     }
+                    Peer peer = peerBlock.getPeer();
+                    LOG.trace("{}:GotBlock[peer={}]", DOWNLOAD_PREFIX, peer.getHost());
                     BlockImpl block = peerBlock.getBlock();
                     if (blockchain.getLastBlock().getId() == block.getPreviousBlockId()) {
                         try {
-                            pushBlock(block);
+                            pushBlock(block, DOWNLOAD_PREFIX);
                         } catch (BlockNotAcceptedException e) {
-                            peerBlock.getPeer().blacklist(e);
+                            peer.blacklist(e);
                         }
                     } else {
                         forkBlocks.add(block);
@@ -549,7 +561,8 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
         }
 
         private void processFork(final Peer peer, final List<BlockImpl> forkBlocks, final Block commonBlock) {
-
+            LOG.trace("{}:StartForkProcessing[size={};peer={}]", FORK_PREFIX, forkBlocks.size(), peer.getHost());
+            LOG.trace("{}:LastMutualBlock[{}]", FORK_PREFIX, commonBlock);
             BigInteger curCumulativeDifficulty = blockchain.getLastBlock().getCumulativeDifficulty();
 
             List<BlockImpl> myPoppedOffBlocks = popOffTo(commonBlock);
@@ -559,7 +572,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                 for (BlockImpl block : forkBlocks) {
                     if (blockchain.getLastBlock().getId() == block.getPreviousBlockId()) {
                         try {
-                            pushBlock(block);
+                            pushBlock(block, "FDL:ProcessFork");
                             pushedForkBlocks += 1;
                         } catch (BlockNotAcceptedException e) {
                             peer.blacklist(e);
@@ -569,7 +582,9 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                 }
             }
 
-            if (pushedForkBlocks > 0 && blockchain.getLastBlock().getCumulativeDifficulty().compareTo(curCumulativeDifficulty) < 0) {
+            BigInteger peerForkCumulativeDifficulty = blockchain.getLastBlock().getCumulativeDifficulty();
+            LOG.trace("{}:ComparingOurAndPeerRealCumulativeDifficulties[peerDiff={};ourDiff={}]", FORK_PREFIX, peerForkCumulativeDifficulty, curCumulativeDifficulty);
+            if (pushedForkBlocks > 0 && peerForkCumulativeDifficulty.compareTo(curCumulativeDifficulty) < 0) {
                 LOG.debug("Pop off caused by peer " + peer.getHost() + ", blacklisting");
                 peer.blacklist("Pop off");
                 List<BlockImpl> peerPoppedOffBlocks = popOffTo(commonBlock);
@@ -584,7 +599,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                 for (int i = myPoppedOffBlocks.size() - 1; i >= 0; i--) {
                     BlockImpl block = myPoppedOffBlocks.remove(i);
                     try {
-                        pushBlock(block);
+                        pushBlock(block, DOWNLOAD_PREFIX);
                     } catch (BlockNotAcceptedException e) {
                         LOG.error("Popped off block no longer acceptable: " + block.getJSONObject().toJSONString(), e);
                         break;
@@ -592,6 +607,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                 }
             } else {
                 LOG.debug("Switched to peer's fork");
+                LOG.trace("{}:PeerForkAccepted[size={}]", FORK_PREFIX, pushedForkBlocks);
                 for (BlockImpl block : myPoppedOffBlocks) {
                     TransactionProcessorImpl.getInstance().processLater(block.getTransactions());
                 }
@@ -1098,21 +1114,20 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
         try {
             BlockImpl lastBlock = blockchain.getLastBlock();
             long peerBlockPreviousBlockId = Convert.parseUnsignedLong((String) request.get("previousBlock"));
-            LOG.trace("Timeout: peerBlock{},ourBlock{}", request.get("timeout"), lastBlock.getTimeout());
-            LOG.trace("Timestamp: peerBlock{},ourBlock{}", request.get("timestamp"), lastBlock.getTimestamp());
-            LOG.trace("PrevId: peerBlock{},ourBlock{}", peerBlockPreviousBlockId, lastBlock.getPreviousBlockId());
+            BlockImpl block = BlockImpl.parseBlock(request);
+            LOG.trace("FDL:ProcessBlock:peerlastBlock[{}]", block);
+            LOG.trace("FDL:ProcessBlock:ourLastBlock[{}]", lastBlock);
             // peer block is the next block in our blockchain
             if (peerBlockPreviousBlockId == lastBlock.getId()) {
-                LOG.debug("push peer last block");
-                BlockImpl block = BlockImpl.parseBlock(request);
-                pushBlock(block);
+
+                pushBlock(block, "FDL:ProcessBlock");
             } else if (peerBlockPreviousBlockId == lastBlock.getPreviousBlockId()) { //peer block is a candidate to replace our last block
-                BlockImpl block = BlockImpl.parseBlock(request);
+
                 //try to replace our last block by peer block only when timestamp of peer block is less than timestamp of our block or when
                 // timestamps are equal but timeout of peer block is greater, so that peer block is better.
                 if (((block.getTimestamp() < lastBlock.getTimestamp()
                         || block.getTimestamp() == lastBlock.getTimestamp() && block.getTimeout() > lastBlock.getTimeout()))) {
-                    LOG.debug("Need to replace block");
+
                     BlockImpl lb = blockchain.getLastBlock();
                     if (lastBlock.getId() != lb.getId()) {
                         LOG.debug("Block changed: expected: id {} height: {} generator: {}, got id {}, height {}, generator {} ", lastBlock.getId(),
@@ -1123,7 +1138,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                     BlockImpl previousBlock = blockchain.getBlock(lastBlock.getPreviousBlockId());
                     lastBlock = popOffTo(previousBlock).get(0);
                     try {
-                        pushBlock(block);
+                        pushBlock(block, "FDL:ProcessBlock");
                         LOG.debug("Pushed better peer block: id {} height: {} generator: {}",
                                 block.getId(),
                                 block.getHeight(),
@@ -1133,7 +1148,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                     }
                     catch (BlockNotAcceptedException e) {
                         LOG.debug("Replacement block failed to be accepted, pushing back our last block");
-                        pushBlock(lastBlock);
+                        pushBlock(lastBlock, "FDL:ProcessBlock");
                         TransactionProcessorImpl.getInstance().processLater(block.getTransactions());
                     }
                 }
@@ -1315,7 +1330,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
         }
     }
 
-    private void pushBlock(final BlockImpl block) throws BlockNotAcceptedException {
+    private void pushBlock(final BlockImpl block, String debugPrefix) throws BlockNotAcceptedException {
 
         int curTime = Apl.getEpochTime();
 
@@ -1325,10 +1340,11 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
             try {
                 Db.getDb().beginTransaction();
                 previousLastBlock = blockchain.getLastBlock();
-
-                validator.validate(block, previousLastBlock, curTime);
-
+                LOG.trace("{}:previousLastBlock[{}]",debugPrefix, previousLastBlock.toString());
+                validator.validate(block, previousLastBlock, curTime, debugPrefix);
                 long nextHitTime = Generator.getNextHitTime(previousLastBlock.getId(), curTime);
+                LOG.trace("{}:nextHitTimeForOurForgers[nextHitTime={};isBetter={}]", debugPrefix, nextHitTime,
+                        block.getTimestamp() > nextHitTime + 1);
                 if (nextHitTime > 0 && block.getTimestamp() > nextHitTime + 1) {
                     String msg = "Rejecting block " + block.getStringId() + " at height " + previousLastBlock.getHeight()
                             + " block timestamp " + block.getTimestamp() + " next hit time " + nextHitTime
@@ -1345,15 +1361,18 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                 validateTransactions(block, previousLastBlock, curTime, duplicates, previousLastBlock.getHeight() >= Constants.LAST_CHECKSUM_BLOCK);
 
                 block.setPrevious(previousLastBlock);
+                LOG.trace("{}:blockToPush[{}]", debugPrefix, block);
                 blockListeners.notify(block, Event.BEFORE_BLOCK_ACCEPT);
                 TransactionProcessorImpl.getInstance().requeueAllUnconfirmedTransactions();
                 addBlock(block);
                 accept(block, validPhasedTransactions, invalidPhasedTransactions, duplicates);
                 AplGlobalObjects.getBlockDb().commit(block);
                 Db.getDb().commitTransaction();
+                LOG.trace("{}:blockPushed[id={}]", debugPrefix, block.getId());
             } catch (Exception e) {
                 Db.getDb().rollbackTransaction();
                 LOG.error("PushBlock, error:", e);
+                LOG.trace("{}:blockPushError[{}]", debugPrefix, block);
                 popOffTo(previousLastBlock);
                 blockchain.setLastBlock(previousLastBlock);
                 throw e;
@@ -1366,13 +1385,15 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
         }
 
         if (block.getTimestamp() >= curTime - 600) {
-            LOG.debug("From pushBlock, Send block to peers: height: {} id: {} generator:{}", block.getHeight(), block.getId(),
-                    Convert.rsAccount(block.getGeneratorId()));
+            LOG.trace("{}:broadcastBlockToPeers{}",debugPrefix, block);
             Peers.sendToSomePeers(block);
         }
 
         blockListeners.notify(block, Event.BLOCK_PUSHED);
+    }
 
+    private void pushBlock(final BlockImpl block) throws BlockNotAcceptedException {
+        pushBlock(block, "");
     }
 
     private void validatePhasedTransactions(int height, List<TransactionImpl> validPhasedTransactions, List<TransactionImpl> invalidPhasedTransactions,
@@ -1591,6 +1612,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                     block = popLastBlock();
                 }
                 long rollbackStartTime = System.currentTimeMillis();
+                LOG.trace("{}:RollbackDerivedTables[height={}]", "FDL:PopOff", commonBlock.getHeight());
                 for (DerivedDbTable table : derivedTables) {
                     table.rollback(commonBlock.getHeight());
                 }
@@ -1745,8 +1767,8 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
     }
 
 
-    void generateBlock(byte[] keySeed, int blockTimestamp, int timeout, int blockVersion) throws BlockNotAcceptedException {
-
+    void generateBlock(byte[] keySeed, int blockTimestamp, int timeout, int blockVersion, String debugPrefix) throws BlockNotAcceptedException {
+        LOG.trace("{}:generateBlock[timestamp={}]", debugPrefix, blockTimestamp);
         BlockImpl previousBlock = blockchain.getLastBlock();
         SortedSet<UnconfirmedTransaction> sortedTransactions = getUnconfirmedTransactions(previousBlock, blockTimestamp);
         List<TransactionImpl> blockTransactions = new ArrayList<>();
@@ -1772,11 +1794,12 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                 payloadHash, publicKey, generationSignature, previousBlockHash, timeout, blockTransactions, keySeed);
 
         try {
-            pushBlock(block);
+            pushBlock(block, debugPrefix);
             blockListeners.notify(block, Event.BLOCK_GENERATED);
             LOG.debug("Account " + Long.toUnsignedString(block.getGeneratorId()) + " generated block " + block.getStringId()
                     + " at height " + block.getHeight() + " timestamp " + block.getTimestamp() + " fee " + ((float)block.getTotalFeeATM())/Constants.ONE_APL);
         } catch (TransactionNotAcceptedException e) {
+            LOG.trace("{}cannotGenerateBlockBadTransaction{}", debugPrefix, block);
             LOG.debug("Generate block failed: " + e.getMessage());
             TransactionProcessorImpl.getInstance().processWaitingTransactions();
             TransactionImpl transaction = e.getTransaction();
@@ -1790,6 +1813,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
             throw e;
         } catch (BlockNotAcceptedException e) {
             LOG.debug("Generate block failed: " + e.getMessage());
+            LOG.trace("{}:blockNotAccepted{}",debugPrefix, block);
             throw e;
         }
     }
@@ -1924,7 +1948,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                                     validatePhasedTransactions(blockchain.getHeight(), validPhasedTransactions, invalidPhasedTransactions, duplicates);
                                     if (validate && currentBlock.getHeight() > 0) {
                                         int curTime = Apl.getEpochTime();
-                                        validator.validate(currentBlock, blockchain.getLastBlock(), curTime);
+                                        validator.validate(currentBlock, blockchain.getLastBlock(), curTime, "SCAN");
                                         byte[] blockBytes = currentBlock.bytes();
                                         JSONObject blockJSON = (JSONObject) JSONValue.parse(currentBlock.getJSONObject().toJSONString());
                                         if (!Arrays.equals(blockBytes,

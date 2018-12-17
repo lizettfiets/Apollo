@@ -12,7 +12,7 @@ public abstract class AbstractBlockValidator implements BlockValidator {
     private static final Logger LOG = getLogger(AbstractBlockValidator.class);
 
     @Override
-    public void validate(BlockImpl block, BlockImpl previousLastBlock, int curTime) throws BlockchainProcessor.BlockNotAcceptedException {
+    public void validate(BlockImpl block, BlockImpl previousLastBlock, int curTime, String debugPrefix) throws BlockchainProcessor.BlockNotAcceptedException {
         if (previousLastBlock.getId() != block.getPreviousBlockId()) {
             throw new BlockchainProcessor.BlockOutOfOrderException("Previous block id doesn't match", block);
         }
@@ -31,7 +31,7 @@ public abstract class AbstractBlockValidator implements BlockValidator {
         if (block.getId() == 0L || AplGlobalObjects.getBlockDb().hasBlock(block.getId(), previousLastBlock.getHeight())) {
             throw new BlockchainProcessor.BlockNotAcceptedException("Duplicate block or invalid id", block);
         }
-        if (!block.verifyGenerationSignature() && !Generator.allowsFakeForging(block.getGeneratorPublicKey())) {
+        if (!block.verifyGenerationSignature(debugPrefix) && !Generator.allowsFakeForging(block.getGeneratorPublicKey())) {
             Account generatorAccount = Account.getAccount(block.getGeneratorId());
             long generatorBalance = generatorAccount == null ? 0 : generatorAccount.getEffectiveBalanceAPL();
             throw new BlockchainProcessor.BlockNotAcceptedException("Generation signature verification failed, effective balance " + generatorBalance, block);

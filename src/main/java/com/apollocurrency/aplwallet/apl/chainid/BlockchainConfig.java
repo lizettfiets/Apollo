@@ -92,11 +92,16 @@ public class BlockchainConfig {
         }
         updateToHeight(lastBlock.getHeight(), true);
     }
+
+    public void reset() {
+        updateToHeight(0, true);
+    }
     private void updateToHeight(int height, boolean inclusive) {
         Objects.requireNonNull(chain);
 
         HeightConfig latestConfig = getConfigAtHeight(height, inclusive);
         if (currentConfig != null) {
+            LOG.info("Set current config to {}", currentConfig);
             currentConfig = latestConfig;
         } else {
             LOG.error("No configs at all!");
@@ -104,6 +109,7 @@ public class BlockchainConfig {
     }
 
     public void rollback(int height) {
+        LOG.info("Rollback blockchain config to {} height", height);
         updateToHeight(height, true);
     }
 

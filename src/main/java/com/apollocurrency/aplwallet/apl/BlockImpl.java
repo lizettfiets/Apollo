@@ -286,7 +286,7 @@ public final class BlockImpl implements Block {
         return json;
     }
 
-    static BlockImpl parseBlock(JSONObject blockData) throws AplException.NotValidException {
+    public static BlockImpl parseBlock(JSONObject blockData) throws AplException.NotValidException {
         try {
             int version = ((Long) blockData.get("version")).intValue();
             int timestamp = ((Long) blockData.get("timestamp")).intValue();
@@ -371,7 +371,7 @@ public final class BlockImpl implements Block {
     }
 
 
-    boolean verifyGenerationSignature() throws BlockchainProcessor.BlockOutOfOrderException {
+    boolean verifyGenerationSignature(String debugPrefix) throws BlockchainProcessor.BlockOutOfOrderException {
 
         try {
 
@@ -395,7 +395,8 @@ public final class BlockImpl implements Block {
 
             BigInteger hit = new BigInteger(1, new byte[]{generationSignatureHash[7], generationSignatureHash[6], generationSignatureHash[5], generationSignatureHash[4], generationSignatureHash[3], generationSignatureHash[2], generationSignatureHash[1], generationSignatureHash[0]});
 
-            return Generator.verifyHit(hit, BigInteger.valueOf(effectiveBalance), previousBlock, requireTimeout(version) ? timestamp - timeout: timestamp);
+            return Generator.verifyHit(hit, BigInteger.valueOf(effectiveBalance), previousBlock, requireTimeout(version) ? timestamp - timeout:
+                    timestamp, debugPrefix);
 
         } catch (RuntimeException e) {
 
@@ -490,6 +491,21 @@ public final class BlockImpl implements Block {
             baseTarget = prevBaseTarget;
         }
         cumulativeDifficulty = previousBlock.cumulativeDifficulty.add(Convert.two64.divide(BigInteger.valueOf(baseTarget)));
+    }
+
+    @Override
+    public String toString() {
+        return
+                "version=" + version +
+                ";height=" + height +
+                ";generator=" + (generatorId == 0 ? Convert.rsAccount(Account.getId(generatorPublicKey)): Convert.rsAccount(generatorId)) +
+                ";timestamp=" + timestamp +
+                ";previousBlockId=" + previousBlockId +
+                ";timeout=" + timeout +
+                ";cumulativeDifficulty=" + cumulativeDifficulty +
+                ";baseTarget=" + baseTarget +
+                ";id=" + getId() +
+                ";txs=" + getTransactions().size();
     }
 
     private int getBlockTimeAverage(BlockImpl previousBlock) {

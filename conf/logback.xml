@@ -22,7 +22,7 @@
             <!-- rollover daily -->
             <fileNamePattern>${LOGDIR}/apl-%d{yyyy-MM-dd}_%i.gz</fileNamePattern>
             <maxHistory>30</maxHistory>
-            <maxFileSize>100MB</maxFileSize>
+            <maxFileSize>1GB</maxFileSize>
             <totalSizeCap>3GB</totalSizeCap>
         </rollingPolicy>
 
@@ -30,9 +30,9 @@
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36}:%line - %msg%n</pattern>
         </encoder>
     </appender>
-    <logger name="com.apollocurrency.aplwallet.apl" level="info"/>
+    <logger name="com.apollocurrency.aplwallet.apl" level="trace"/>
     <!--Uncomment next line to enable trim duration logging-->
-    <!--<logger name="com.apollocurrency.aplwallet.apl.db.VersionedEntityDbTable" level="trace"/>-->
+    <logger name="com.apollocurrency.aplwallet.apl.db.VersionedEntityDbTable" level="off"/>
 
     <!--Forging debug-->
     <!--<logger name="com.apollocurrency.aplwallet.apl.Generator" level="trace"/>-->
