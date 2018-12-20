@@ -3,10 +3,25 @@
 # first parameter is a current directory, where wallet is executing now (directory, which we should update)
 # second parameter is a update directory which contains unpacked jar for update
 # third parameter is a boolean flag, which indicates desktop mode
+
+unamestr=`uname`
+
+function notify
+{
+    if [[ "$unamestr" == 'Darwin' ]]; then
+	osascript -e "display notification \"$1\" with title \"Apollo\""
+    else
+	echo $1
+    fi
+}
+
+
 if  [ -d $1 ] && [ -d $2 ] && [ -n $3 ]
 then
-    echo Starting Platform Dependent Updater
-    echo Stopping wallet.... 
+    
+    notify "Starting Apollo Updater"
+    notify Stopping wallet.... 
+
     NEXT_WAIT_TIME=0
     
     until [ $(ps aux | grep Apollo.jar | grep -v grep | wc -l) -eq 0 ] || [ $NEXT_WAIT_TIME -eq 10 ]; do
@@ -15,7 +30,7 @@ then
 	echo "Waiting more time to stop wallet..."
     done
     
-    unamestr=`uname`
+
     
     echo Copy update files
     cp -vRa $2/* $1
