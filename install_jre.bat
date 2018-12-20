@@ -14,6 +14,7 @@ unzip -o %1\libs.zip -d %1
 
 del /S /F /Q %1\lib
 rmdir /S /Q %1\lib
+mkdir %1\lib
 
 copy /Y %WALLETDIR:~0,-1%\ApolloWallet-%VERSION%-libs\*" %WALLETDIR:~0,-1%\lib"
 
