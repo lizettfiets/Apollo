@@ -8,6 +8,8 @@ then
     
     unamestr=`uname`
     
+      VERSION=$(cat VERSION)
+
     rm -rf $1/jre
 
     
@@ -32,6 +34,10 @@ then
     elif [[ "$unamestr" == 'Linux' ]]; then
 	chmod 755 $1/jre/bin/*
     fi
+    
+    curl -o libs.tzr.gz https://s3.amazonaws.com/updates.apollowallet.org/libs/ApolloWallet-$VERSION-libs.tar.gz
+    tar -zxvf ApolloWallet-$VERSION-libs.tar.gz
+    mv ApolloWallet-$VERSION-libs lib
 
 else
     echo Invalid input parameters $1
