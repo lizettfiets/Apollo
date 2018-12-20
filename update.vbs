@@ -17,11 +17,11 @@ If  ( (fso.FolderExists(WScript.Arguments(0))) AND (fso.FolderExists( WScript.Ar
 	WScript.Echo "Starting Platform Dependent Updater"
 	WScript.Echo "Waiting 3 sec"
 	WScript.Sleep 3000
+	Dim oShell
+	Set oShell = WScript.CreateObject ("WScript.Shell")
 	oShell.Run "taskkill /f /im ""java.exe""", , True
 	WScript.Echo "Waiting 3 sec"
 	WScript.Sleep 3000
-	Dim oShell
-	Set oShell = WScript.CreateObject ("WScript.Shell")
 	oShell.Run "taskkill /f /im ""java.exe""", , True
 	WScript.Echo "remove_jre.bat" & " " & chr(34) & Wscript.Arguments(0) & chr(34)
 	oShell.CurrentDirectory = WScript.Arguments(1)
