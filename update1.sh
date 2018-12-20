@@ -17,14 +17,6 @@ then
     
     unamestr=`uname`
     
-    if [[ "$unamestr" == 'Darwin' ]]; then
-	rm -rf $1/jre
-    fi
-
-    if [[ "$unamestr" == 'Linux' ]]; then
-	rm -rf $1/jre
-    fi
-    
     echo Copy update files
     cp -vRa $2/* $1
     
@@ -46,6 +38,10 @@ then
 	chmod 755 $1/secureTransport/securenodexchg
 	chmod 755 $1/secureTransport/runClient.sh
     fi
+
+# Install JRE
+    
+    bash ./update2.sh $1
 
     if [[ "$unamestr" == 'Darwin' ]]; then
 	chmod 755 $1/jre/bin/* $1/jre/lib/lib*
