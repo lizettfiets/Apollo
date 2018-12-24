@@ -1368,7 +1368,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
                 accept(block, validPhasedTransactions, invalidPhasedTransactions, duplicates);
                 AplGlobalObjects.getBlockDb().commit(block);
                 Db.getDb().commitTransaction();
-                LOG.trace("{}:blockPushed[id={}]", debugPrefix, block.getId());
+                LOG.trace("{}:blockPushed[id={}]", debugPrefix, Long.toUnsignedString(block.getId()));
             } catch (Exception e) {
                 Db.getDb().rollbackTransaction();
                 LOG.error("PushBlock, error:", e);
@@ -1385,7 +1385,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
         }
 
         if (block.getTimestamp() >= curTime - 600) {
-            LOG.trace("{}:broadcastBlockToPeers{}",debugPrefix, block);
+            LOG.trace("{}:broadcastBlockToPeers[{}]",debugPrefix, block);
             Peers.sendToSomePeers(block);
         }
 
@@ -1799,7 +1799,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
             LOG.debug("Account " + Long.toUnsignedString(block.getGeneratorId()) + " generated block " + block.getStringId()
                     + " at height " + block.getHeight() + " timestamp " + block.getTimestamp() + " fee " + ((float)block.getTotalFeeATM())/Constants.ONE_APL);
         } catch (TransactionNotAcceptedException e) {
-            LOG.trace("{}cannotGenerateBlockBadTransaction{}", debugPrefix, block);
+            LOG.trace("{}cannotGenerateBlockBadTransaction[{}]", debugPrefix, block);
             LOG.debug("Generate block failed: " + e.getMessage());
             TransactionProcessorImpl.getInstance().processWaitingTransactions();
             TransactionImpl transaction = e.getTransaction();
@@ -1813,7 +1813,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
             throw e;
         } catch (BlockNotAcceptedException e) {
             LOG.debug("Generate block failed: " + e.getMessage());
-            LOG.trace("{}:blockNotAccepted{}",debugPrefix, block);
+            LOG.trace("{}:blockNotAccepted[{}]",debugPrefix, block);
             throw e;
         }
     }

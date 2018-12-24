@@ -500,11 +500,11 @@ public final class BlockImpl implements Block {
                 ";height=" + height +
                 ";generator=" + (generatorId == 0 ? Convert.rsAccount(Account.getId(generatorPublicKey)): Convert.rsAccount(generatorId)) +
                 ";timestamp=" + timestamp +
-                ";previousBlockId=" + previousBlockId +
+                ";previousBlockId=" + Long.toUnsignedString(previousBlockId) +
                 ";timeout=" + timeout +
                 ";cumulativeDifficulty=" + cumulativeDifficulty +
                 ";baseTarget=" + baseTarget +
-                ";id=" + getId() +
+                ";id=" + Long.toUnsignedString(getId()) +
                 ";txs=" + getTransactions().size();
     }
 
