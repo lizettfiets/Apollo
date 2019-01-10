@@ -143,7 +143,7 @@ public final class Peers {
 
     private static final JSONObject myPeerInfo;
     private static final List<Peer.Service> myServices;
-    private static volatile Peer.BlockchainState currentBlockchainState;
+    private static volatile Peer.BlockchainState currentBlockchainState = Peer.BlockchainState.UNDEFINED;
     private static volatile JSONStreamAware myPeerInfoRequest;
     private static volatile JSONStreamAware myPeerInfoResponse;
     private static boolean shutdown;
@@ -1244,17 +1244,20 @@ public final class Peers {
     private static void checkBlockchainState() {
         Peer.BlockchainState state = Constants.isLightClient ? Peer.BlockchainState.LIGHT_CLIENT :
                 (Apl.getBlockchainProcessor().isDownloading() || Apl.getBlockchain().getLastBlockTimestamp() < Apl.getEpochTime() - 600) ? Peer.BlockchainState.DOWNLOADING :
-                        (Apl.getBlockchain().getLastBlock().getBaseTarget() / AplGlobalObjects.getChainConfig().getCurrentConfig().getInitialBaseTarget() > 10 && !AplGlobalObjects.getChainConfig().isTestnet()) ?
+                        (Apl.getBlockchain().getLastBlock().getBaseTarget() / AplGlobalObjects.getChainConfig().getCurrentConfig().getInitialBaseTarget() > 10 /*&& !AplGlobalObjects.getChainConfig().isTestnet()*/) ?
                                 Peer.BlockchainState.FORK :
                         Peer.BlockchainState.UP_TO_DATE;
+        LOG.debug("Blockchain state: " + currentBlockchainState.toString());
+        LOG.debug("Blockchain state: " + state.name());
         if (state != currentBlockchainState) {
             JSONObject json = new JSONObject(myPeerInfo);
             json.put("blockchainState", state.ordinal());
             myPeerInfoResponse = JSON.prepare(json);
-            json.put("requestType", "getInfo");
-            myPeerInfoRequest = JSON.prepareRequest(json);
             currentBlockchainState = state;
         }
+            JSONObject json = new JSONObject(myPeerInfo);
+            json.put("requestType", "getInfo");
+            myPeerInfoRequest = JSON.prepareRequest(json);
     }
 
     public static JSONStreamAware getMyPeerInfoRequest() {

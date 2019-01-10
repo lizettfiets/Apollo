@@ -56,7 +56,8 @@ public interface Peer extends Comparable<Peer> {
         UP_TO_DATE,
         DOWNLOADING,
         LIGHT_CLIENT,
-        FORK
+        FORK,
+        UNDEFINED
     }
 
     boolean providesService(Service service);

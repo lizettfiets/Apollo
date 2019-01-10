@@ -119,7 +119,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
             request.put("chainId", AplGlobalObjects.getChainConfig().getChain().getChainId());
             getCumulativeDifficultyRequest = JSON.prepareRequest(request);
         }
-
+        
         private boolean peerHasMore;
         private List<Peer> connectedPublicPeers;
         private List<Long> chainBlockIds;
@@ -647,7 +647,7 @@ public final class BlockchainProcessorImpl implements BlockchainProcessor {
             this.startHeight = startHeight;
             this.requestCount = 0;
         }
-
+     
         /**
          * Return the result
          *

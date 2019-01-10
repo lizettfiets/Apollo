@@ -471,7 +471,7 @@ final class PeerImpl implements Peer {
     public int getLastConnectAttempt() {
         return lastConnectAttempt;
     }
-
+    
     @Override
     public JSONObject send(final JSONStreamAware request, UUID chainId) {
         return send(request, chainId, Peers.MAX_RESPONSE_SIZE, false);
@@ -589,6 +589,7 @@ final class PeerImpl implements Peer {
                 deactivate();
                 if (Errors.SEQUENCE_ERROR.equals(response.get("error")) && request != Peers.getMyPeerInfoRequest()) {
                     LOG.debug("Sequence error, reconnecting to " + host);
+                    LOG.debug(log);
                     connect(targetChainId);
                 } else {
                     LOG.debug("Peer " + host + " version " + version + " returned error: " +
