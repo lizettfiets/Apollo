@@ -670,7 +670,7 @@ public class TransactionProcessorImpl implements TransactionProcessor {
     }
 
     private void processPeerTransactions(JSONArray transactionsData) throws AplException.NotValidException {
-        if (blockchain.getHeight() <= blockchainConfig.getLastKnownBlock() && !testUnconfirmedTransactions) {
+        if (blockchain.getHeight() <= blockchainConfig.getLastKnownBlockHeight() && !testUnconfirmedTransactions) {
             return;
         }
         if (transactionsData == null || transactionsData.isEmpty()) {
@@ -734,7 +734,7 @@ public class TransactionProcessorImpl implements TransactionProcessor {
         try {
             try {
                 Db.getDb().beginTransaction();
-                if (blockchain.getHeight() < blockchainConfig.getLastKnownBlock() && !testUnconfirmedTransactions) {
+                if (blockchain.getHeight() < blockchainConfig.getLastKnownBlockHeight() && !testUnconfirmedTransactions) {
                     throw new AplException.NotCurrentlyValidException("Blockchain not ready to accept transactions");
                 }
 

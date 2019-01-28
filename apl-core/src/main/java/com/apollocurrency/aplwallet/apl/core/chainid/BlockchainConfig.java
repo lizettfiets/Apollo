@@ -6,8 +6,16 @@ package com.apollocurrency.aplwallet.apl.core.chainid;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-import javax.enterprise.inject.spi.CDI;
-import javax.inject.Inject;
+import com.apollocurrency.aplwallet.apl.core.app.Block;
+import com.apollocurrency.aplwallet.apl.core.app.BlockDao;
+import com.apollocurrency.aplwallet.apl.core.app.BlockDaoImpl;
+import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
+import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessorImpl;
+import com.apollocurrency.aplwallet.apl.core.app.Constants;
+import com.apollocurrency.aplwallet.apl.util.Listener;
+import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
+import org.slf4j.Logger;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
@@ -17,22 +25,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-
-import com.apollocurrency.aplwallet.apl.core.app.Block;
-import com.apollocurrency.aplwallet.apl.core.app.BlockDao;
-import com.apollocurrency.aplwallet.apl.core.app.BlockDaoImpl;
-import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
-import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessorImpl;
-import com.apollocurrency.aplwallet.apl.core.app.Constants;
-import com.apollocurrency.aplwallet.apl.util.Listener;
-import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
+import javax.enterprise.inject.spi.CDI;
+import javax.inject.Inject;
 import javax.inject.Singleton;
-import org.slf4j.Logger;
 
 /**
- * <p>This class used as configuration of current working chain. Commonly it mapped to an active chain described in conf/chains.json</p>
- * <p>To provide height-based config changing as described in conf/chains.json it used special listener that, depending
- * on current height, change part of config represented by {@link HeightConfig}</p>
+ * <p>This class used as configuration of current working chain. Commonly {@link BlockchainConfig} mapped to an active chain described in conf/chains
+ * .json</p>
+ * <p>To provide height-based config changing as described in conf/chains.json it uses special listener which change part of config represented by
+ * {@link HeightConfig} depending on current height</p>
  *
  * <p>Note that this class is thread-safe and can be used without additional synchronization after {@link BlockchainConfig#init} method call</p>
  * <p>Typically config should be updated to the latest height at application startup to provide correct config values for blockchain logic, such as
@@ -51,9 +52,9 @@ public class BlockchainConfig {
     private final int minPrunableLifetime;
     private final boolean enablePruning;
     private final int maxPrunableLifetime;
-    // lastKnownBlock must also be set in html/www/js/ars.constants.js
+    // lastKnownBlockHeight must also be set in html/www/js/ars.constants.js
     private final short shufflingProcessingDeadline;
-    private final long lastKnownBlock;
+    private final long lastKnownBlockHeight;
     private final long unconfirmedPoolDepositAtm;
     private final long shufflingDepositAtm;
     private final int guaranteedBalanceConfirmations;
@@ -87,7 +88,7 @@ public class BlockchainConfig {
         this.leasingDelay                   = testnet ? testnetLeasingDelay == -1 ? 1440 : testnetLeasingDelay : 1440;
         this.minPrunableLifetime            = testnet ? 1440 * 60 : 14 * 1440 * 60;
         this.shufflingProcessingDeadline    = (short)(testnet ? 10 : 100);
-        this.lastKnownBlock                 = testnet ? 0 : 0;
+        this.lastKnownBlockHeight = chain.getLastKnownBlockHeight();
         this.unconfirmedPoolDepositAtm      = (testnet ? 50 : 100) * Constants.ONE_APL;
         this.shufflingDepositAtm            = (testnet ? 7 : 1000) * Constants.ONE_APL;
         this.guaranteedBalanceConfirmations = testnet ? testnetGuaranteedBalanceConfirmations == -1 ? 1440 : testnetGuaranteedBalanceConfirmations : 1440;
@@ -219,8 +220,8 @@ public class BlockchainConfig {
         return shufflingProcessingDeadline;
     }
 
-    public long getLastKnownBlock() {
-        return lastKnownBlock;
+    public long getLastKnownBlockHeight() {
+        return lastKnownBlockHeight;
     }
 
     public long getUnconfirmedPoolDepositAtm() {

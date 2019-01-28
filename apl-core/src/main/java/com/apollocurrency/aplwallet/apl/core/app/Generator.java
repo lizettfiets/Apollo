@@ -73,7 +73,7 @@ public final class Generator implements Comparable<Generator> {
     private static final Collection<Generator> allGenerators = Collections.unmodifiableCollection(generators.values());
     private static volatile List<Generator> sortedForgers = null;
     private static long lastBlockId;
-    private static int delayTime = Constants.FORGING_DELAY;
+    private static int delayTime = Constants.GENERATION_DELAY;
 
     private static final Runnable generateBlocksThread = new Runnable() {
 
@@ -89,7 +89,7 @@ public final class Generator implements Comparable<Generator> {
                     blockchain.updateLock();
                     try {
                         Block lastBlock = blockchain.getLastBlock();
-                        if (lastBlock == null || lastBlock.getHeight() < blockchainConfig.getLastKnownBlock()) {
+                        if (lastBlock == null || lastBlock.getHeight() < blockchainConfig.getLastKnownBlockHeight()) {
                             return;
                         }
                         final int generationLimit = timeService.getEpochTime() - delayTime;
@@ -237,7 +237,7 @@ public final class Generator implements Comparable<Generator> {
         try {
             if (lastBlockId == Generator.lastBlockId && sortedForgers != null) {
                 for (Generator generator : sortedForgers) {
-                    if (generator.getHitTime() >= curTime - Constants.FORGING_DELAY) {
+                    if (generator.getHitTime() >= curTime - Constants.GENERATION_DELAY) {
                         return generator.getHitTime();
                     }
                 }
@@ -306,7 +306,7 @@ public final class Generator implements Comparable<Generator> {
         this.accountId = Account.getId(publicKey);
         blockchain.updateLock();
         try {
-            if (blockchain.getHeight() >= blockchainConfig.getLastKnownBlock()) {
+            if (blockchain.getHeight() >= blockchainConfig.getLastKnownBlockHeight()) {
                 setLastBlock(blockchain.getLastBlock());
             }
             sortedForgers = null;
@@ -381,7 +381,7 @@ public final class Generator implements Comparable<Generator> {
         while (true) {
             try {
                 blockchainProcessor.generateBlock(keySeed, timestamp  + timeout, timeout, timeoutAndVersion[1]);
-                setDelay(Constants.FORGING_DELAY);
+                setDelay(Constants.GENERATION_DELAY);
                 return true;
             }
             catch (BlockchainProcessor.TransactionNotAcceptedException e) {

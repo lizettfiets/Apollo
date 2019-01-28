@@ -16,6 +16,10 @@ public class Generator implements Comparable<Generator> {
     private volatile BigInteger effectiveBalance;
     private volatile long deadline;
 
+    public byte[] getKeySeed() {
+        return keySeed;
+    }
+
     public Generator(byte[] keySeed) {
         this.keySeed = keySeed;
         this.publicKey = Crypto.getPublicKey(keySeed);
@@ -40,6 +44,26 @@ public class Generator implements Comparable<Generator> {
 
     public long getDeadline() {
         return deadline;
+    }
+
+    public void setHitTime(long hitTime) {
+        this.hitTime = hitTime;
+    }
+
+    public void setHit(BigInteger hit) {
+        this.hit = hit;
+    }
+
+    public void setEffectiveBalance(BigInteger effectiveBalance) {
+        this.effectiveBalance = effectiveBalance;
+    }
+
+    public void setDeadline(long deadline) {
+        this.deadline = deadline;
+    }
+
+    public byte[] getPublicKey() {
+        return publicKey;
     }
 
     @Override

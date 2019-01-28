@@ -20,9 +20,9 @@
 
 package com.apollocurrency.aplwallet.apl.core.app;
 
-import javax.enterprise.inject.spi.CDI;
-
 import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
+
+import javax.enterprise.inject.spi.CDI;
 
 //TODO: Make this class true constants holder, move all properties-dependent vars out
 public final class Constants {
@@ -45,7 +45,7 @@ public final class Constants {
     public static final long MIN_FORGING_BALANCE_ATM = 1000 * ONE_APL;
 
     public static final int MAX_TIMEDRIFT = 15; // allow up to 15 s clock difference
-    public static final int FORGING_DELAY = pl.getIntProperty("apl.forgingDelay");
+    public static final int GENERATION_DELAY = pl.getIntProperty("apl.forgingDelay");
     public static final int FORGING_SPEEDUP = pl.getIntProperty("apl.forgingSpeedup");
     public static final int BATCH_COMMIT_SIZE = pl.getIntProperty("apl.batchCommitSize", Integer.MAX_VALUE);
     public static final int TRIM_TRANSACTION_TIME_THRESHHOLD = pl.getIntProperty("apl.trimOperationsLogThreshold", 1000);

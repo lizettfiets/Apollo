@@ -4,6 +4,11 @@
 
 package com.apollocurrency.aplwallet.apl.core.chainid;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -12,13 +17,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 @JsonPropertyOrder({"chainId", "isTestnet", "active", "defaultPeers", "wellKnownPeers", "blacklistedPeers", "name", "description", "symbol",
-        "prefix", "project", "genesisLocation", "blockchainProperties"})
+        "prefix", "project","lastKnownBlockHeight", "genesisLocation", "blockchainProperties"})
 public class Chain {
     private UUID chainId;
     private boolean isTestnet;
@@ -31,6 +31,7 @@ public class Chain {
     private String symbol;
     private String prefix;
     private String project;
+    private int lastKnownBlockHeight;
     private String genesisLocation;
     private Map<Integer, BlockchainProperties> blockchainProperties;
     @JsonCreator
@@ -45,6 +46,7 @@ public class Chain {
                  @JsonProperty("symbol") String symbol,
                  @JsonProperty("prefix") String prefix,
                  @JsonProperty("project") String project,
+                 @JsonProperty("lastKnowBlockHeight") Integer lastKnowBlockHeight,
                  @JsonProperty("genesisLocation") String genesisLocation,
                  @JsonProperty("blockchainProperties") List<BlockchainProperties> blockchainProperties
     ) {
@@ -59,6 +61,7 @@ public class Chain {
         this.symbol = symbol;
         this.prefix = prefix;
         this.project = project;
+        this.lastKnownBlockHeight = lastKnowBlockHeight;
         this.genesisLocation = genesisLocation;
         this.blockchainProperties =
                 blockchainProperties
@@ -147,6 +150,14 @@ public class Chain {
 
     public String getName() {
         return name;
+    }
+
+    public void setLastKnownBlockHeight(int lastKnownBlockHeight) {
+        this.lastKnownBlockHeight = lastKnownBlockHeight;
+    }
+
+    public int getLastKnownBlockHeight() {
+        return lastKnownBlockHeight;
     }
 
     public String getDescription() {

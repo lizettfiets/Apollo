@@ -5,31 +5,36 @@
 package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
 import com.apollocurrency.aplwallet.apl.core.app.Block;
+import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.chainid.HeightConfig;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import javax.inject.Inject;
 
 public class BlockGenerationAlgoProviderImpl implements BlockGenerationAlgoProvider {
+    private static final Logger LOG = LoggerFactory.getLogger(BlockGenerationAlgoProviderImpl.class);
 
-    private BlockchainConfig blockchainConfig;
-    private UnconfirmedTransactionDao unconfirmedTransactionDao;
-
+    private final BlockchainConfig blockchainConfig;
+    private final BlockchainProcessor blockchainProcessor;
     @Inject
-    public BlockGenerationAlgoProviderImpl(UnconfirmedTransactionDao unconfirmedTransactionDao,
+    public BlockGenerationAlgoProviderImpl(BlockchainProcessor blockchainProcessor,
                                            BlockchainConfig blockchainConfig) {
-        this.unconfirmedTransactionDao = unconfirmedTransactionDao;
+        this.blockchainProcessor = blockchainProcessor;
         this.blockchainConfig = blockchainConfig;
     }
 
     @Override
-    public BigInteger calculateHit(Long accountId, Block prevBlock) {
+    public BigInteger calculateHit(byte[] publicKey, Block prevBlock) {
         MessageDigest digest = Crypto.sha256();
-        digest.update(accountId.toString().getBytes());
-        byte[] generationSignatureHash = digest.digest(prevBlock.getId().toString().getBytes());
+        digest.update(prevBlock.getGenerationSignature());
+        byte[] generationSignatureHash = digest.digest(publicKey);
         return new BigInteger(1, new byte[] {generationSignatureHash[7], generationSignatureHash[6], generationSignatureHash[5], generationSignatureHash[4], generationSignatureHash[3], generationSignatureHash[2], generationSignatureHash[1], generationSignatureHash[0]});
     }
 
@@ -41,7 +46,7 @@ public class BlockGenerationAlgoProviderImpl implements BlockGenerationAlgoProvi
 
     @Override
     public boolean verifyHit(BigInteger hit, BigInteger effectiveBalance, Block previousBlock, long timestamp) {
-        Long elapsedTime = timestamp - previousBlock.getTimestamp();
+        long elapsedTime = timestamp - previousBlock.getTimestamp();
         if (elapsedTime <= 0) {
             return false;
         }
@@ -54,33 +59,31 @@ public class BlockGenerationAlgoProviderImpl implements BlockGenerationAlgoProvi
     }
 
     @Override
-    public long getBlockTimestamp(Generator generator, long generationLimit) {
-        return (generationLimit - generator.hitTime > 3600) ? generationLimit : generator.hitTime + 1;
+    public int getBlockTimestamp(long hitTime, int generationTimestamp) {
+        return (generationTimestamp - hitTime > 3600) ? generationTimestamp : (int) (hitTime + 1);
     }
 
     @Override
-    public long[] getBlockTimeoutAndVersion(long potentialBlockTimestamp, long currentTimeWithForgingDelay, Block lastBlock) {
-        int height = lastBlock.getHeight();
-        HeightConfig currentHeightConfig = blockchainConfig.getConfigAtHeight(height, true);
-        int version = currentHeightConfig.isAdaptiveForgingEnabled() ? Block.REGULAR_BLOCK_VERSION : Block.LEGACY_BLOCK_VERSION;
-        long timeout = 0;
+    public Pair<Integer, Integer> getBlockTimeoutAndVersion(int blockTimestamp, int generationTimestamp, Block lastBlock) {
+        HeightConfig currentConfig = blockchainConfig.getCurrentConfig();
+        int version = currentConfig.isAdaptiveForgingEnabled() ? Block.REGULAR_BLOCK_VERSION : Block.LEGACY_BLOCK_VERSION;
+        int timeout = 0;
         // transactions at generator hit time
         boolean noTransactionsAtTimestamp =
-                unconfirmedTransactionDao.getUnconfirmedTransactions(lastBlock.getNodeId(), potentialBlockTimestamp).size() == 0;
+                blockchainProcessor.getUnconfirmedTransactions(lastBlock, blockTimestamp).size() == 0;
         // transactions at current time
         boolean noTransactionsAtGenerationLimit =
-                unconfirmedTransactionDao.getUnconfirmedTransactions(lastBlock.getNodeId(), currentTimeWithForgingDelay).size() == 0;
-        long planedBlockTime = potentialBlockTimestamp - lastBlock.getTimestamp();
-
-        log.trace("Planed blockTime {} - uncg {}, unct {}", planedBlockTime,
+                blockchainProcessor.getUnconfirmedTransactions(lastBlock, generationTimestamp).size() == 0;
+        int planedBlockTime = blockTimestamp - lastBlock.getTimestamp();
+        LOG.debug("Planed blockTime {} - uncg {}, unct {}", planedBlockTime,
                 noTransactionsAtGenerationLimit, noTransactionsAtTimestamp);
-        if (currentHeightConfig.isAdaptiveForgingEnabled() // try to calculate timeout only when adaptive forging enabled
+        if (currentConfig.isAdaptiveForgingEnabled() // try to calculate timeout only when adaptive forging enabled
                 && noTransactionsAtTimestamp   // means that if no timeout provided, block will be empty
-                && planedBlockTime < currentHeightConfig.getAdaptiveBlockTime() // calculate timeout only for faster than predefined empty block
+                && planedBlockTime < currentConfig.getAdaptiveBlockTime() // calculate timeout only for faster than predefined empty block
         ) {
-            long actualBlockTime = currentTimeWithForgingDelay - lastBlock.getTimestamp();
-            log.trace("Act time:" + actualBlockTime);
-            if (actualBlockTime >= currentHeightConfig.getAdaptiveBlockTime()) {
+            int actualBlockTime = generationTimestamp - lastBlock.getTimestamp();
+            LOG.debug("Act time:" + actualBlockTime);
+            if (actualBlockTime >= currentConfig.getAdaptiveBlockTime()) {
                 // empty block can be generated by timeout
                 version = Block.ADAPTIVE_BLOCK_VERSION;
             } else if (!noTransactionsAtGenerationLimit && actualBlockTime >= planedBlockTime) {
@@ -89,13 +92,12 @@ public class BlockGenerationAlgoProviderImpl implements BlockGenerationAlgoProvi
             } else {
                 return null;
             }
-            timeout = currentTimeWithForgingDelay - potentialBlockTimestamp;
-
-            return new long[] {timeout, version};
+            timeout = generationTimestamp - blockTimestamp;
+            return new ImmutablePair<>(timeout, version);
         }
-        if (currentHeightConfig.isAdaptiveForgingEnabled() && noTransactionsAtTimestamp) {
+        if (currentConfig.isAdaptiveForgingEnabled() && noTransactionsAtTimestamp) {
             version = Block.ADAPTIVE_BLOCK_VERSION;
         }
-        return new long[] {timeout, version};
+        return new ImmutablePair<>(timeout, version);
     }
 }

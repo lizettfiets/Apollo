@@ -4,11 +4,15 @@
 
 package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
-public interface BlockGenerator {
+import com.apollocurrency.aplwallet.apl.util.Observable;
+
+public interface BlockGenerator extends Observable<Generator, Event> {
     Generator startGeneration(Generator generator);
 
     Generator stopGeneration(Generator generator);
 
-    void performForgingIteration();
+    void performGenerationIteration();
+
+    void setGenerationDelay(int delay);
 
 }

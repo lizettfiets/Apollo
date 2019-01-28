@@ -51,6 +51,7 @@
     "symbol": "Apollo",
     "prefix": "APL",
     "project": "Apollo",
+    "lastKnowBlockHeight": 1300000,
     "genesisLocation": "data/genesisAccounts.json",
     "blockchainProperties": [
       {
