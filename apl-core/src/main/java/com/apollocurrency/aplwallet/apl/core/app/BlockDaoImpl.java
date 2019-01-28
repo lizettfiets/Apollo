@@ -542,6 +542,7 @@ public class BlockDaoImpl implements BlockDao {
                 pstmt.setLong(++i, block.getGeneratorId());
                 pstmt.setInt(++i, block.getTimeout());
                 pstmt.executeUpdate();
+//                Assume that transactions already set here for block
                 lookupTransactionDao().saveTransactions(con, block.getTransactions());
             }
             if (block.getPreviousBlockId() != 0) {

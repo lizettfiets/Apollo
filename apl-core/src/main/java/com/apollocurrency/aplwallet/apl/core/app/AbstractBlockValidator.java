@@ -7,22 +7,27 @@ package com.apollocurrency.aplwallet.apl.core.app;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-import java.util.Objects;
-
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
-import javax.inject.Inject;
+import com.apollocurrency.aplwallet.apl.crypto.Crypto;
 import org.slf4j.Logger;
+
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.Objects;
+import javax.inject.Inject;
 
 public abstract class AbstractBlockValidator implements BlockValidator {
     private static final Logger LOG = getLogger(AbstractBlockValidator.class);
     private BlockDao blockDao;
     protected BlockchainConfig blockchainConfig;
-    
+    private Blockchain blockchain;
     @Inject
-    public AbstractBlockValidator(BlockDao blockDao, BlockchainConfig blockchainConfig) {
+    public AbstractBlockValidator(BlockDao blockDao, BlockchainConfig blockchainConfig, Blockchain blockchain) {
         Objects.requireNonNull(blockDao, "BlockDao is null");
         Objects.requireNonNull(blockchainConfig, "Blockchain config is null");
         this.blockDao = blockDao;
+        this.blockchain = blockchain;
         this.blockchainConfig = blockchainConfig;
     }
 
@@ -52,8 +57,9 @@ public abstract class AbstractBlockValidator implements BlockValidator {
             throw new BlockchainProcessor.BlockNotAcceptedException("Generation signature verification failed, effective balance " + generatorBalance, block);
         }
 
-        if (block.getTransactions().size() > blockchainConfig.getCurrentConfig().getMaxNumberOfTransactions()) {
-            throw new BlockchainProcessor.BlockNotAcceptedException("Invalid block transaction count " + block.getTransactions().size(), block);
+        int numberOfTransactions = block.getTransactions().size();
+        if (numberOfTransactions > blockchainConfig.getCurrentConfig().getMaxNumberOfTransactions()) {
+            throw new BlockchainProcessor.BlockNotAcceptedException("Invalid block transaction count " + numberOfTransactions, block);
         }
         if (block.getPayloadLength() > blockchainConfig.getCurrentConfig().getMaxPayloadLength() || block.getPayloadLength() < 0) {
             throw new BlockchainProcessor.BlockNotAcceptedException("Invalid block payload length " + block.getPayloadLength(), block);
@@ -86,4 +92,36 @@ public abstract class AbstractBlockValidator implements BlockValidator {
 
     abstract void validateRegularBlock(Block block, Block previousBlock) throws BlockchainProcessor.BlockNotAcceptedException;
 
+    public boolean verifyGenerationSignature(Block block) throws BlockchainProcessor.BlockOutOfOrderException {
+        try {
+            Block previousBlock = blockchain.getBlock(block.getPreviousBlockId());
+            if (previousBlock == null) {
+                throw new BlockchainProcessor.BlockOutOfOrderException("Can't verify signature because previous block is missing", block);
+            }
+
+            Account account = Account.getAccount(block.getGeneratorId());
+            long effectiveBalance = account == null ? 0 : account.getEffectiveBalanceAPL();
+            if (effectiveBalance <= 0) {
+                return false;
+            }
+
+            MessageDigest digest = Crypto.sha256();
+            digest.update(previousBlock.getGenerationSignature());
+            byte[] actualGenerationSignature = digest.digest(block.getGeneratorPublicKey());
+            if (!Arrays.equals(block.getGenerationSignature(), actualGenerationSignature)) {
+                return false;
+            }
+
+            BigInteger hit = new BigInteger(1, new byte[]{actualGenerationSignature[7], actualGenerationSignature[6], actualGenerationSignature[5], actualGenerationSignature[4], actualGenerationSignature[3], actualGenerationSignature[2], actualGenerationSignature[1], actualGenerationSignature[0]});
+
+            return Generator.verifyHit(hit, BigInteger.valueOf(effectiveBalance), previousBlock, block.getTimestamp() - block.getTimeout());
+
+        } catch (RuntimeException e) {
+
+            LOG.info("Error verifying block generation signature", e);
+            return false;
+
+        }
+
+    }
 }

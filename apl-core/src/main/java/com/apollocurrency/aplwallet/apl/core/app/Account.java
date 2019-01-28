@@ -22,24 +22,8 @@ package com.apollocurrency.aplwallet.apl.core.app;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-import javax.enterprise.inject.spi.CDI;
-import javax.servlet.http.HttpServletRequest;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import com.apollocurrency.aplwallet.api.dto.Status2FA;
+import com.apollocurrency.aplwallet.apl.core.BlockService;
 import com.apollocurrency.aplwallet.apl.core.app.AccountLedger.LedgerEntry;
 import com.apollocurrency.aplwallet.apl.core.app.AccountLedger.LedgerEvent;
 import com.apollocurrency.aplwallet.apl.core.app.AccountLedger.LedgerHolding;
@@ -70,6 +54,23 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import javax.enterprise.inject.spi.CDI;
+import javax.servlet.http.HttpServletRequest;
+
 @SuppressWarnings({"UnusedDeclaration", "SuspiciousNameCombination"})
 /**
  * Used as global access point to all interactions with account and public keys
@@ -89,7 +90,7 @@ public final class Account {
             Genesis.loadGenesisAccounts();
     private static Blockchain blockchain = CDI.current().select(BlockchainImpl.class).get();
     private static BlockchainProcessor blockchainProcessor = CDI.current().select(BlockchainProcessorImpl.class).get();
-
+    private static BlockService blockService = CDI.current().select(BlockService.class).get();
 
     private static final DbKey.LongKeyFactory<Account> accountDbKeyFactory = new DbKey.LongKeyFactory<Account>("id") {
 
@@ -363,7 +364,7 @@ public final class Account {
 
             blockchainProcessor.addListener(block -> {
                 publicKeyCache.remove(accountDbKeyFactory.newKey(block.getGeneratorId()));
-                block.getTransactions().forEach(transaction -> {
+                blockService.getTransactions(block).forEach(transaction -> {
                     publicKeyCache.remove(accountDbKeyFactory.newKey(transaction.getSenderId()));
                     if (!transaction.getAppendages(appendix -> (appendix instanceof PublicKeyAnnouncementAppendix), false).isEmpty()) {
                         publicKeyCache.remove(accountDbKeyFactory.newKey(transaction.getRecipientId()));
@@ -711,7 +712,7 @@ public final class Account {
         return key;
     }
 
-    static Account addOrGetAccount(long id) {
+    public static Account addOrGetAccount(long id) {
         return addOrGetAccount(id, false);
     }
 
@@ -1588,7 +1589,7 @@ public final class Account {
         }
     }
 
-    void addToBalanceAndUnconfirmedBalanceATM(LedgerEvent event, long eventId, long amountATM) {
+    public void addToBalanceAndUnconfirmedBalanceATM(LedgerEvent event, long eventId, long amountATM) {
         addToBalanceAndUnconfirmedBalanceATM(event, eventId, amountATM, 0);
     }
 
@@ -1624,7 +1625,7 @@ public final class Account {
         }
     }
 
-    void addToForgedBalanceATM(long amountATM) {
+    public void addToForgedBalanceATM(long amountATM) {
         if (amountATM == 0) {
             return;
         }

@@ -23,8 +23,6 @@ package com.apollocurrency.aplwallet.apl.core.app;
 import java.math.BigInteger;
 import java.util.List;
 
-import org.json.simple.JSONObject;
-
 public interface Block {
     int LEGACY_BLOCK_VERSION   = 3;
     int REGULAR_BLOCK_VERSION  = 4;
@@ -35,9 +33,13 @@ public interface Block {
 
     long getId();
 
+    void setId(long id);
+
     String getStringId();
 
     int getHeight();
+
+    void setHeight(int height);
 
     int getTimestamp();
 
@@ -71,21 +73,17 @@ public interface Block {
 
     long getBaseTarget();
 
+    void setBaseTarget(long baseTarget);
+
     BigInteger getCumulativeDifficulty();
+
+    void setCumulativeDifficulty(BigInteger cumulativeDifficulty);
 
     byte[] getBytes();
 
     boolean verifyBlockSignature();
 
-    boolean verifyGenerationSignature() throws BlockchainProcessor.BlockOutOfOrderException;
-
     void setPrevious(Block block);
 
-    JSONObject getJSONObject();
-
     int getTimeout();
-
-    default String toJsonString() {
-        return getJSONObject().toJSONString();
-    }
 }

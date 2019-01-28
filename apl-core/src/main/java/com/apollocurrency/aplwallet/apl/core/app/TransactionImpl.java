@@ -42,8 +42,6 @@ import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.enterprise.inject.spi.CDI;
-import javax.inject.Inject;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -53,6 +51,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import javax.enterprise.inject.spi.CDI;
+import javax.inject.Inject;
 
 public class TransactionImpl implements Transaction {
     private static final Logger LOG = LoggerFactory.getLogger(TransactionImpl.class);
@@ -409,7 +409,7 @@ public class TransactionImpl implements Transaction {
         return feeATM;
     }
 
-    long[] getBackFees() {
+    public long[] getBackFees() {
         return type.getBackFees(this);
     }
 
@@ -840,7 +840,7 @@ public class TransactionImpl implements Transaction {
         return prunableJSON;
     }
 
-    static TransactionImpl parseTransaction(JSONObject transactionData) throws AplException.NotValidException {
+    public static TransactionImpl parseTransaction(JSONObject transactionData) throws AplException.NotValidException {
         TransactionImpl transaction = newTransactionBuilder(transactionData).build();
         if (transaction.getSignature() != null && !transaction.checkSignature()) {
             throw new AplException.NotValidException("Invalid transaction signature for transaction " + transaction.getJSONObject().toJSONString());

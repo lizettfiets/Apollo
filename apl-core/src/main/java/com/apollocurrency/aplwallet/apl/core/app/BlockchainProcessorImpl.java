@@ -20,6 +20,7 @@
 
 package com.apollocurrency.aplwallet.apl.core.app;
 
+import com.apollocurrency.aplwallet.apl.core.BlockService;
 import com.apollocurrency.aplwallet.apl.core.app.transaction.PrunableTransaction;
 import com.apollocurrency.aplwallet.apl.core.app.transaction.messages.Prunable;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
@@ -109,6 +110,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
     private volatile int lastRestoreTime = 0;
     private final Set<Long> prunableTransactions = new HashSet<>();
     private BlockValidator validator;
+    private BlockService blockService;
     private final Listeners<Block, Event> blockListeners = new Listeners<>();
     private volatile Peer lastBlockchainFeeder;
     private volatile int lastBlockchainFeederHeight;
@@ -598,7 +600,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                 List<Block> peerPoppedOffBlocks = popOffTo(commonBlock);
                 pushedForkBlocks = 0;
                 for (Block block : peerPoppedOffBlocks) {
-                    lookupTransactionProcessor().processLater(block.getTransactions());
+                    lookupTransactionProcessor().processLater(blockService.getTransactions(block));
                 }
             }
 
@@ -616,7 +618,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
             } else {
                 LOG.debug("Switched to peer's fork");
                 for (Block block : myPoppedOffBlocks) {
-                    lookupTransactionProcessor().processLater(block.getTransactions());
+                    lookupTransactionProcessor().processLater(blockService.getTransactions(block));
                 }
             }
 
@@ -954,9 +956,10 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
     };
 
     @Inject
-    private BlockchainProcessorImpl(BlockValidator validator) {
+    private BlockchainProcessorImpl(BlockValidator validator, BlockService service) {
         final int trimFrequency = propertiesLoader.getIntProperty("apl.trimFrequency");
         this.validator = validator;
+        this.blockService = service;
         blockListeners.addListener(block -> {
             if (block.getHeight() % 5000 == 0) {
                 LOG.info("processed block " + block.getHeight());
@@ -1152,13 +1155,13 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                                 block.getId(),
                                 block.getHeight(),
                                 Convert2.rsAccount(block.getGeneratorId()));
-                        lookupTransactionProcessor().processLater(lastBlock.getTransactions());
+                        lookupTransactionProcessor().processLater(blockService.getTransactions(lastBlock));
                         LOG.debug("Last block " + lastBlock.getStringId() + " was replaced by " + block.getStringId());
                     }
                     catch (BlockNotAcceptedException e) {
                         LOG.debug("Replacement block failed to be accepted, pushing back our last block");
                         pushBlock(lastBlock);
-                        lookupTransactionProcessor().processLater(block.getTransactions());
+                        lookupTransactionProcessor().processLater(blockService.getTransactions(block));
                     }
                 }
             }// else ignore the block
@@ -1429,7 +1432,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
         long calculatedTotalFee = 0;
         MessageDigest digest = Crypto.sha256();
         boolean hasPrunedTransactions = false;
-        for (Transaction transaction : block.getTransactions()) {
+        for (Transaction transaction : blockService.getTransactions(block)) {
             if (transaction.getTimestamp() > curTime + Constants.MAX_TIMEDRIFT) {
                 throw new BlockOutOfOrderException("Invalid transaction timestamp: " + transaction.getTimestamp()
                         + ", current time is " + curTime, block);
@@ -1495,7 +1498,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                         Map<TransactionType, Map<String, Integer>> duplicates) throws TransactionNotAcceptedException {
         try {
             isProcessingBlock = true;
-            for (Transaction transaction : block.getTransactions()) {
+            for (Transaction transaction : blockService.getTransactions(block)) {
                 if (! ((TransactionImpl)transaction).applyUnconfirmed()) {
                     throw new TransactionNotAcceptedException("Double spending", transaction);
                 }
@@ -1505,7 +1508,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
             validPhasedTransactions.forEach(transaction -> transaction.getPhasing().countVotes(transaction));
             invalidPhasedTransactions.forEach(transaction -> transaction.getPhasing().reject(transaction));
             int fromTimestamp = timeService.getEpochTime() - blockchainConfig.getMaxPrunableLifetime();
-            for (Transaction transaction : block.getTransactions()) {
+            for (Transaction transaction : blockService.getTransactions(block)) {
                 try {
                     ((TransactionImpl)transaction).apply();
                     if (transaction.getTimestamp() > fromTimestamp) {
@@ -1526,7 +1529,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                 }
             }
             SortedSet<Transaction> possiblyApprovedTransactions = new TreeSet<>(finishingTransactionsComparator);
-            block.getTransactions().forEach(transaction -> {
+            blockService.getTransactions(block).forEach(transaction -> {
                 PhasingPoll.getLinkedPhasedTransactions(transaction.getFullHash()).forEach(phasedTransaction -> {
                     if (phasedTransaction.getPhasing().getFinishHeight() > block.getHeight()) {
                         possiblyApprovedTransactions.add(phasedTransaction);
@@ -1568,8 +1571,9 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                 }
             });
             blockListeners.notify(block, Event.AFTER_BLOCK_APPLY);
-            if (block.getTransactions().size() > 0) {
-                lookupTransactionProcessor().notifyListeners(block.getTransactions(), TransactionProcessor.Event.ADDED_CONFIRMED_TRANSACTIONS);
+            List<Transaction> transactions = blockService.getTransactions(block);
+            if (transactions.size() > 0) {
+                lookupTransactionProcessor().notifyListeners(transactions, TransactionProcessor.Event.ADDED_CONFIRMED_TRANSACTIONS);
             }
             AccountLedger.commitEntries();
         } finally {
@@ -1961,7 +1965,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                                             throw new AplException.NotValidException("Block JSON cannot be parsed back to the same block");
                                         }
                                         validateTransactions(currentBlock, blockchain.getLastBlock(), curTime, duplicates, true);
-                                        for (Transaction transaction : currentBlock.getTransactions()) {
+                                        for (Transaction transaction : blockService.getTransactions(currentBlock)) {
                                             byte[] transactionBytes = ((TransactionImpl)transaction).bytes();
                                             if (!Arrays.equals(transactionBytes, TransactionImpl.newTransactionBuilder(transactionBytes).build().bytes())) {
                                                 throw new AplException.NotValidException("Transaction bytes cannot be parsed back to the same transaction: "
