@@ -10,5 +10,4 @@ public interface Consensus {
     Block generateBlock();
 
     boolean verifyBlock(Block block);
-    
 }

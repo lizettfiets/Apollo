@@ -13,8 +13,6 @@ import com.apollocurrency.aplwallet.apl.core.app.Constants;
 import com.apollocurrency.aplwallet.apl.core.app.Time;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.consensus.BlockAlgoProvider;
-import com.apollocurrency.aplwallet.apl.util.Listener;
-import com.apollocurrency.aplwallet.apl.util.Listeners;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,15 +25,16 @@ import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 
-public class BlockGeneratorImpl implements BlockGenerator, Runnable {
+public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(BlockGeneratorImpl.class);
     // All available generators
     private Map<Long, Generator> generators = new HashMap<>();
     // Filtered generators which have positive effective balance
+    // This field cached for better performance
     private List<Generator> sortedGenerators;
     // Last block id, calculated during generation iteration
+    // This field cached for better performance
     private long lastBlockId;
-    private static final Listeners<Generator,Event> listeners = new Listeners<>();
     private BlockAlgoProvider blockAlgoProvider;
     private Blockchain blockchain;
     private BlockchainProcessor blockchainProcessor;
@@ -72,7 +71,7 @@ public class BlockGeneratorImpl implements BlockGenerator, Runnable {
                     if (lastBlock == null || lastBlock.getHeight() < blockchainConfig.getLastKnownBlockHeight()) {
                         return;
                     }
-//                    Note, that generation delay can be negative, so forging will be more faster
+//                    Note, that generation delay can be negative, so generation will be more faster
                     final int generationLimit = time.getTime() - generationDelay;
                     if (lastBlock.getId() != lastBlockId || sortedGenerators == null) {
                         lastBlockId = lastBlock.getId();
@@ -142,7 +141,6 @@ public class BlockGeneratorImpl implements BlockGenerator, Runnable {
             generator.setHit(blockGenerationAlgoProvider.calculateHit(generator.getPublicKey(), lastBlock));
             generator.setHitTime(blockGenerationAlgoProvider.getHitTime(generator.getEffectiveBalance(), generator.getHit(), lastBlock));
             generator.setDeadline(Math.max(generator.getHitTime() - lastBlock.getTimestamp(), 0));
-            listeners.notify(generator, Event.GENERATOR_UPDATE);
         }
 
     boolean forge(Generator generator, Block lastBlock, int generationTimestamp) throws BlockchainProcessor.BlockNotAcceptedException {
@@ -225,12 +223,17 @@ public class BlockGeneratorImpl implements BlockGenerator, Runnable {
     }
 
     @Override
-    public boolean addListener(Listener<Generator> listener, Event eventType) {
-        return listeners.addListener(listener, eventType);
+    public boolean stopAll() {
+        return false;
     }
 
     @Override
-    public boolean removeListener(Listener<Generator> listener, Event eventType) {
-        return listeners.addListener(listener, eventType);
+    public boolean suspendAll() {
+        return false;
+    }
+
+    @Override
+    public boolean resumeAll() {
+        return false;
     }
 }
