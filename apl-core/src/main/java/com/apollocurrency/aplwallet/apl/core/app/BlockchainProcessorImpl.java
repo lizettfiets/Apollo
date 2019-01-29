@@ -1638,6 +1638,14 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
         }
     }
 
+    @Override
+    public void popOffAndProcessTransactions(Block commonBlock) {
+        List<Block> poppedOffBlock = popOffTo(commonBlock);
+        for (Block block : poppedOffBlock) {
+            transactionProcessor.processLater(block.getTransactions());
+        }
+    }
+
     private Block popLastBlock() {
         Block block = lookupBlockhain().getLastBlock();
         if (block.getHeight() == 0) {

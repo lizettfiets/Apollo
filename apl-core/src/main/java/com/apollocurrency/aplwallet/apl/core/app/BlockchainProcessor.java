@@ -76,6 +76,8 @@ public interface BlockchainProcessor extends Observable<Block,BlockchainProcesso
 
     List<Block> popOffTo(Block commonBlock);
 
+    void popOffAndProcessTransactions(Block commonBlock);
+
     void registerDerivedTable(DerivedDbTable table);
 
     void trimDerivedTables();
@@ -102,7 +104,7 @@ public interface BlockchainProcessor extends Observable<Block,BlockchainProcesso
 
         @Override
         public String getMessage() {
-            return block == null ? super.getMessage() : super.getMessage() + ", block " + block.getStringId() + " " + block.getJSONObject().toJSONString();
+            return block == null ? super.getMessage() : super.getMessage() + ", block " + block.getStringId() + " " + block.toString();
         }
 
     }

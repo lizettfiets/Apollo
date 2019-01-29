@@ -11,7 +11,6 @@ import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
 import com.apollocurrency.aplwallet.apl.core.app.Constants;
 import com.apollocurrency.aplwallet.apl.core.app.Time;
-import com.apollocurrency.aplwallet.apl.core.app.UnconfirmedTransaction;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.consensus.BlockAlgoProvider;
 import com.apollocurrency.aplwallet.apl.util.Listener;
@@ -26,7 +25,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 public class BlockGeneratorImpl implements BlockGenerator, Runnable {
@@ -85,10 +83,7 @@ public class BlockGeneratorImpl implements BlockGenerator, Runnable {
                                 int timestamp = blockGenerationAlgoProvider.getBlockTimestamp(generator.getHitTime(), generationLimit);
                                 if (timestamp != generationLimit && generator.getHitTime() > 0 && timestamp < lastBlock.getTimestamp() - lastBlock.getTimeout()) {
                                     LOG.debug("Pop off: " + generator.toString() + " will pop off last block " + lastBlock.getStringId());
-                                    List<Block> poppedOffBlock = blockchainProcessor.popOffTo(previousBlock);
-                                    for (Block block : poppedOffBlock) {
-                                        transactionProcessor.processLater(block.getTransactions());
-                                    }
+                                    blockchainProcessor.popOffAndProcessTransactions(previousBlock);
                                     lastBlock = previousBlock;
                                     lastBlockId = previousBlock.getId();
                                     break;
@@ -183,29 +178,33 @@ public class BlockGeneratorImpl implements BlockGenerator, Runnable {
         }
     }
 
-    int timestamp = getTimestamp(generationLimit);
-    int[] timeoutAndVersion = getBlockTimeoutAndVersion(timestamp, generationLimit, lastBlock);
+    public boolean forge(Generator generator, int generationTimestamp, Block lastBlock) throws BlockchainProcessor.BlockNotAcceptedException {
+        int timestamp = blockGenerationAlgoProvider.getBlockTimestamp(generator.getHitTime(),
+                generationTimestamp);
+        Pair<Integer, Integer> timeoutAndVersion = blockGenerationAlgoProvider.getBlockTimeoutAndVersion(timestamp, generationTimestamp, lastBlock);
         if (timeoutAndVersion == null) {
-        return false;
-    }
-    int timeout = timeoutAndVersion[0];
-        if (!verifyHit(hit, effectiveBalance, lastBlock, timestamp)) {
-        LOG.debug(this.toString() + " failed to forge at " + (timestamp + timeout) + " height " + lastBlock.getHeight() + " " +
-                "last " +
-                "timestamp " + lastBlock.getTimestamp());
-        return false;
-    }
-    int start = timeService.getEpochTime();
-        while (true) {
-        try {
-            blockchainProcessor.generateBlock(keySeed, timestamp  + timeout, timeout, timeoutAndVersion[1]);
-            setDelay(Constants.GENERATION_DELAY);
-            return true;
+            return false;
         }
-        catch (BlockchainProcessor.TransactionNotAcceptedException e) {
-            // the bad transaction has been expunged, try again
-            if (timeService.getEpochTime() - start > 10) { // give up after trying for 10 s
-                throw e;
+        int timeout = timeoutAndVersion.getLeft();
+        int version = timeoutAndVersion.getRight();
+        if (!blockGenerationAlgoProvider.verifyHit(generator.getHit(), generator.getEffectiveBalance(), lastBlock, timestamp)) {
+            LOG.debug(this.toString() + " failed to forge at " + (timestamp + timeout) + " height " + lastBlock.getHeight() + " " +
+                    "last " +
+                    "timestamp " + lastBlock.getTimestamp());
+            return false;
+        }
+        int start = time.getTime();
+        while (true) {
+            try {
+                blockchainProcessor.generateBlock(generator.getKeySeed(), timestamp + timeout, timeout, version);
+                setGenerationDelay(Constants.GENERATION_DELAY);
+                return true;
+            }
+            catch (BlockchainProcessor.TransactionNotAcceptedException e) {
+                // the bad transaction has been expunged, try again
+                if (time.getTime() - start > 2) { // give up after trying for 2 s
+                    throw e;
+                }
             }
         }
     }
