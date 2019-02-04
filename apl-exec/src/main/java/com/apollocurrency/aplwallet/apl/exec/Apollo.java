@@ -151,7 +151,8 @@ public class Apollo {
                 StringUtils.isBlank(args.configDir) ? envVars.configDir : args.configDir,
                 Constants.APPLICATION_DIR_NAME + ".properties",
                 SYSTEM_PROPERTY_NAMES);
-
+        System.out.print(envVars.configDir);
+        System.out.print(args.configDir);
         ChainsConfigLoader chainsConfigLoader = new ChainsConfigLoader(
                 configDirProvider,
                 args.isResourceIgnored(),

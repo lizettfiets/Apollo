@@ -4,6 +4,7 @@
 
 package com.apollocurrency.aplwallet.apl.util.env.dirprovider;
 
+import java.io.File;
 import java.nio.file.Paths;
 
 /**
@@ -21,9 +22,15 @@ public class DefaultConfigDirProvider implements ConfigDirProvider {
         this.isService = isService;
     }
 
+    private boolean checkDirIfExist(String path){
+        File dir = new File(path);
+        return dir.exists();
+    }
+        
     @Override
     public String getInstallationConfigDirectory() {
-        return DirProviderUtil.getBinDir().resolve("conf").toAbsolutePath().toString();
+        String confDir = DirProviderUtil.getBinDir().resolve("conf").toAbsolutePath().toString();
+        return checkDirIfExist(confDir) ? confDir : "";
     }
 
     @Override
@@ -33,8 +40,12 @@ public class DefaultConfigDirProvider implements ConfigDirProvider {
 
     @Override
     public String getUserConfigDirectory() {
-        return isService
-                ? getInstallationConfigDirectory()
-                : Paths.get(System.getProperty("user.home"), "." + applicationName, "conf").toAbsolutePath().toString();
+        if (isService) return getInstallationConfigDirectory();
+        else {
+            String confDir = Paths.get(System.getProperty("user.home"), "." + applicationName, "conf").toAbsolutePath().toString();
+            return checkDirIfExist(confDir) ? confDir : "";
+        }
+        
+        
     }
 }
