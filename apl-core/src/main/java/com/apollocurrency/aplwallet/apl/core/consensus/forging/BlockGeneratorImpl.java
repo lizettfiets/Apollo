@@ -5,14 +5,15 @@
 package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
 
-import com.apollocurrency.aplwallet.apl.core.app.Account;
+import com.apollocurrency.aplwallet.apl.core.account.Account;
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
-import com.apollocurrency.aplwallet.apl.core.app.Constants;
 import com.apollocurrency.aplwallet.apl.core.app.Time;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.consensus.BlockAlgoProvider;
+import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacade;
+import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,16 +44,24 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
     private BlockchainConfig blockchainConfig;
     private Time time;
     private boolean suspendGeneration;
-    private int generationDelay = Constants.FORGING_SPEEDUP;
+    private PropertiesHolder propertiesHolder;
+    private ConsensusFacade consensusFacade;
+    private int generationDelay;
 
     @Inject
-    public BlockGeneratorImpl(BlockAlgoProvider blockAlgoProvider, Blockchain blockchain, BlockchainProcessor blockchainProcessor, BlockGenerationAlgoProvider blockGenerationAlgoProvider, BlockchainConfig blockchainConfig, Time time) {
+    public BlockGeneratorImpl(BlockAlgoProvider blockAlgoProvider, Blockchain blockchain, BlockchainProcessor blockchainProcessor,
+                              BlockGenerationAlgoProvider blockGenerationAlgoProvider, BlockchainConfig blockchainConfig, Time time,
+                              PropertiesHolder propertiesHolder, ConsensusFacade consensusFacade) {
+
         this.blockAlgoProvider = blockAlgoProvider;
         this.blockchain = blockchain;
         this.blockchainProcessor = blockchainProcessor;
         this.blockGenerationAlgoProvider = blockGenerationAlgoProvider;
         this.blockchainConfig = blockchainConfig;
         this.time = time;
+        this.propertiesHolder = propertiesHolder;
+        this.generationDelay = propertiesHolder.FORGING_DELAY();
+        this.consensusFacade = consensusFacade;
     }
 
     @Override
@@ -100,8 +110,19 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
                         sortedGenerators = Collections.unmodifiableList(activeGenerators);
                     }
                     for (Generator generator : sortedGenerators) {
-                        if (generator.getHitTime() > generationLimit || forge(generator, lastBlock, generationLimit)) {
-                            return;
+                        Block block = consensusFacade.generateBlock(generator, lastBlock, generationLimit);
+                        if (block != null) {
+                            List<Block> prevBlocks = new ArrayList<>();
+                            prevBlocks.add(lastBlock);
+                            if (lastBlock.getHeight() > 1) {
+                                prevBlocks.add(blockchain.getBlockAtHeight(lastBlock.getHeight() - 1));
+                            }
+                            if (lastBlock.getHeight() > 2) {
+                                prevBlocks.add(blockchain.getBlockAtHeight(lastBlock.getHeight() - 2));
+                            }
+                            prevBlocks.sort(Comparator.comparingInt(Block::getHeight));
+                            consensusFacade.setPreviousBlock(block, prevBlocks);
+
                         }
                     }
                 } finally {
@@ -143,40 +164,7 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
             generator.setDeadline(Math.max(generator.getHitTime() - lastBlock.getTimestamp(), 0));
         }
 
-    boolean forge(Generator generator, Block lastBlock, int generationTimestamp) throws BlockchainProcessor.BlockNotAcceptedException {
-        int timestamp = blockGenerationAlgoProvider.getBlockTimestamp(generator.getHitTime(), generationTimestamp);
-        Pair<Integer, Integer> timeoutAndVersion = blockGenerationAlgoProvider.getBlockTimeoutAndVersion(timestamp, generationTimestamp, lastBlock);
-        if (timeoutAndVersion == null) {
-            return false;
-        }
-        int timeout = timeoutAndVersion.getLeft();
-        int version = timeoutAndVersion.getRight();
-        if (!blockGenerationAlgoProvider.verifyHit(generator.getHit(), generator.getEffectiveBalance(), lastBlock, timestamp)) {
-            LOG.debug(this.toString() + " failed to forge at " + (timestamp + timeout) + " height " + lastBlock.getHeight() + " " +
-                    "last " +
-                    "timestamp " + lastBlock.getTimestamp());
-            return false;
-        }
-        int start = time.getTime();
-        while (true) {
-            try {
-                blockchainProcessor.generateBlock(generator.getKeySeed(), timestamp  + timeout, timeout, version);
-                setGenerationDelay(Constants.GENERATION_DELAY);
-                return true;
-            }
-            catch (BlockchainProcessor.TransactionNotAcceptedException e) {
-                // the bad transaction has been expunged, try again
-                if (time.getTime() - start > 3) { // give up after trying for 3 s
-                    throw e;
-                }
-            }
-            catch (BlockchainProcessor.BlockNotAcceptedException e) {
-                throw e;
-            }
-        }
-    }
-
-    public boolean forge(Generator generator, int generationTimestamp, Block lastBlock) throws BlockchainProcessor.BlockNotAcceptedException {
+     public boolean forge(Generator generator, int generationTimestamp, Block lastBlock) throws BlockchainProcessor.BlockNotAcceptedException {
         int timestamp = blockGenerationAlgoProvider.getBlockTimestamp(generator.getHitTime(),
                 generationTimestamp);
         Pair<Integer, Integer> timeoutAndVersion = blockGenerationAlgoProvider.getBlockTimeoutAndVersion(timestamp, generationTimestamp, lastBlock);
@@ -195,7 +183,7 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
         while (true) {
             try {
                 blockchainProcessor.generateBlock(generator.getKeySeed(), timestamp + timeout, timeout, version);
-                setGenerationDelay(Constants.GENERATION_DELAY);
+                setGenerationDelay(generationDelay);
                 return true;
             }
             catch (BlockchainProcessor.TransactionNotAcceptedException e) {

@@ -1516,60 +1516,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
         }
     }
 
-    public SortedSet<UnconfirmedTransaction> selectUnconfirmedTransactions(
-            Map<TransactionType, Map<String, Integer>> duplicates, Block previousBlock, int blockTimestamp) {
 
-        List<UnconfirmedTransaction> orderedUnconfirmedTransactions = new ArrayList<>();
-        DbIterator<UnconfirmedTransaction> allUnconfirmedTransactions = lookupTransactionProcessor().getAllUnconfirmedTransactions();
-        try (FilteringIterator<UnconfirmedTransaction> unconfirmedTransactions = new FilteringIterator<>(
-                allUnconfirmedTransactions,
-                transaction -> hasAllReferencedTransactions(
-                        transaction.getTransaction(),
-                        transaction.getTimestamp(), 0))) {
-            for (UnconfirmedTransaction unconfirmedTransaction : unconfirmedTransactions) {
-                orderedUnconfirmedTransactions.add(unconfirmedTransaction);
-            }
-        }
-        SortedSet<UnconfirmedTransaction> sortedTransactions = new TreeSet<>(transactionArrivalComparator);
-        int payloadLength = 0;
-        int maxPayloadLength = blockchainConfig.getCurrentConfig().getMaxPayloadLength();
-        while (payloadLength <= maxPayloadLength && sortedTransactions.size() <= blockchainConfig.getCurrentConfig().getMaxNumberOfTransactions()) {
-            int prevNumberOfNewTransactions = sortedTransactions.size();
-            for (UnconfirmedTransaction unconfirmedTransaction : orderedUnconfirmedTransactions) {
-                int transactionLength = unconfirmedTransaction.getTransaction().getFullSize();
-                if (sortedTransactions.contains(unconfirmedTransaction) || payloadLength + transactionLength > maxPayloadLength) {
-                    continue;
-                }
-                if (unconfirmedTransaction.getVersion() != getTransactionVersion(previousBlock.getHeight())) {
-                    continue;
-                }
-                if (blockTimestamp > 0 && (unconfirmedTransaction.getTimestamp() > blockTimestamp + Constants.MAX_TIMEDRIFT
-                        || unconfirmedTransaction.getExpiration() < blockTimestamp)) {
-                    continue;
-                }
-                try {
-                    unconfirmedTransaction.getTransaction().validate();
-                } catch (AplException.ValidationException e) {
-                    continue;
-                }
-                if (unconfirmedTransaction.getTransaction().attachmentIsDuplicate(duplicates, true)) {
-                    continue;
-                }
-                sortedTransactions.add(unconfirmedTransaction);
-                payloadLength += transactionLength;
-            }
-            if (sortedTransactions.size() == prevNumberOfNewTransactions) {
-                break;
-            }
-        }
-        return sortedTransactions;
-    }
-
-
-    private static final Comparator<UnconfirmedTransaction> transactionArrivalComparator = Comparator
-            .comparingLong(UnconfirmedTransaction::getArrivalTimestamp)
-            .thenComparingInt(UnconfirmedTransaction::getHeight)
-            .thenComparingLong(UnconfirmedTransaction::getId);
 
     public SortedSet<UnconfirmedTransaction> getUnconfirmedTransactions(Block previousBlock, int blockTimestamp) {
         Map<TransactionType, Map<String, Integer>> duplicates = new HashMap<>();

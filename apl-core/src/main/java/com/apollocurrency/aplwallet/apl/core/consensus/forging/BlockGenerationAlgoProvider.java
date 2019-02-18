@@ -5,7 +5,7 @@
 package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
 import com.apollocurrency.aplwallet.apl.core.app.Block;
-import org.apache.commons.lang3.tuple.Pair;
+import com.apollocurrency.aplwallet.apl.util.Pair;
 
 import java.math.BigInteger;
 

@@ -21,7 +21,7 @@ public class BlockJsonParser {
         this.service = blockService;
     }
 
-    JSONObject toJson(Block block) {
+    public JSONObject toJson(Block block) {
         JSONObject json = new JSONObject();
         json.put("version", block.getVersion());
         json.put("timestamp", block.getTimestamp());
@@ -41,7 +41,7 @@ public class BlockJsonParser {
         json.put("transactions", transactionsData);
         return json;
     }
-    BlockImpl fromJson(JSONObject blockData) throws AplException.NotValidException {
+    public BlockImpl fromJson(JSONObject blockData) throws AplException.NotValidException {
 //        try {
             int version = ((Long) blockData.get("version")).intValue();
             int timestamp = ((Long) blockData.get("timestamp")).intValue();

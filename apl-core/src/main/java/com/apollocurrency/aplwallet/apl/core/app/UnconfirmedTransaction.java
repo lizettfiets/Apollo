@@ -101,11 +101,11 @@ public class UnconfirmedTransaction implements Transaction {
         }
     }
 
-    TransactionImpl getTransaction() {
+    public TransactionImpl getTransaction() {
         return transaction;
     }
 
-    long getArrivalTimestamp() {
+    public long getArrivalTimestamp() {
         return arrivalTimestamp;
     }
 

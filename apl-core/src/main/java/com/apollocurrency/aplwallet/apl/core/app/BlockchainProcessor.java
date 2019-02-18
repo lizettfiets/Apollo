@@ -20,16 +20,12 @@
 
 package com.apollocurrency.aplwallet.apl.core.app;
 
-import com.apollocurrency.aplwallet.apl.core.transaction.TransactionType;
-import com.apollocurrency.aplwallet.apl.util.AplException;
-import com.apollocurrency.aplwallet.apl.core.db.DerivedDbTable;
 import com.apollocurrency.aplwallet.apl.core.peer.Peer;
+import com.apollocurrency.aplwallet.apl.util.AplException;
 import com.apollocurrency.aplwallet.apl.util.Observable;
 import org.json.simple.JSONObject;
 
 import java.util.List;
-import java.util.Map;
-import java.util.SortedSet;
 
 public interface BlockchainProcessor extends Observable<Block,BlockchainProcessor.Event> {
 
@@ -58,12 +54,8 @@ public interface BlockchainProcessor extends Observable<Block,BlockchainProcesso
 
     void fullReset();
 
-    SortedSet<UnconfirmedTransaction> getUnconfirmedTransactions(Block previousBlock, int blockTimestamp);
 
     void generateBlock(byte[] keySeed, int blockTimestamp, int timeout, int blockVersion) throws BlockNotAcceptedException;
-
-    SortedSet<UnconfirmedTransaction> selectUnconfirmedTransactions(
-            Map<TransactionType, Map<String, Integer>> duplicates, Block previousBlock, int blockTimestamp);
 
     void scan(int height, boolean validate);
 

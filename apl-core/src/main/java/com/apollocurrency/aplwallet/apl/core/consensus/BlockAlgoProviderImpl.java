@@ -6,29 +6,18 @@ package com.apollocurrency.aplwallet.apl.core.consensus;
 
 
 import com.apollocurrency.aplwallet.apl.core.app.Block;
-import com.apollocurrency.aplwallet.apl.core.app.BlockDao;
-import com.apollocurrency.aplwallet.apl.core.app.Constants;
-import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.chainid.HeightConfig;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
+import com.apollocurrency.aplwallet.apl.util.Constants;
 
 import java.math.BigInteger;
-import java.util.Objects;
-import javax.inject.Inject;
+import java.util.List;
+import javax.inject.Singleton;
 
+@Singleton
 public class BlockAlgoProviderImpl implements BlockAlgoProvider {
 
     private static final BigInteger two64 = new BigInteger("18446744073709551616");
-    private BlockchainConfig blockchainConfig;
-    private BlockDao blockDao;
-
-    @Inject
-    public BlockAlgoProviderImpl(BlockchainConfig blockchainConfig, BlockDao blockDao) {
-        Objects.requireNonNull(blockchainConfig, "Blockchain config should not be null");
-        Objects.requireNonNull(blockchainConfig, "BlockDao should not be null");
-        this.blockchainConfig = blockchainConfig;
-        this.blockDao = blockDao;
-    }
 
     @Override
     public long calculateId(Block block) {
@@ -44,23 +33,25 @@ public class BlockAlgoProviderImpl implements BlockAlgoProvider {
             return block.getId();
     }
 
-//    @Override
-//    public void setPreviousBlock(Block block, Block previousBlock) {
-//        block.setHeight(previousBlock.getHeight() + 1);
-//        long baseTarget = calculateBaseTarget(block, previousBlock);
-//        block.setBaseTarget(baseTarget);
-//        BigInteger cumulativeDifficulty = calculateCumulativeDifficulty(block, previousBlock);
-//        block.setCumulativeDifficulty(cumulativeDifficulty);
-//    }
 
     @Override
-    public long calculateBaseTarget(Block block, Block previousBlock) {
+    public long getBlockTimeAverage(List<Block> blocks) {
+        long totalTime = 0;
+        for (int i = blocks.size() - 1; i > 0 ; i--) {
+            Block block = blocks.get(i);
+            Block prevBlock = blocks.get(i - 1);
+            long actualBlockTime = block.getTimestamp() - prevBlock.getTimestamp() - block.getTimeout();
+            totalTime += actualBlockTime;
+        }
+        return totalTime / blocks.size();
+    }
+
+    @Override
+    public long calculateBaseTarget(Block previousBlock, long blocktimeAverage, HeightConfig config) {
         long prevBaseTarget = previousBlock.getBaseTarget();
         int blockchainHeight = previousBlock.getHeight();
         long calculatedBaseTarget;
         if (blockchainHeight > 2 && blockchainHeight % 2 == 0) {
-            long blocktimeAverage = getBlockTimeAverage(block, previousBlock);
-            HeightConfig config = blockchainConfig.getCurrentConfig();
             int blockTime = config.getBlockTime();
             if (blocktimeAverage > blockTime) {
                 int maxBlocktimeLimit = config.getMaxBlockTimeLimit();
@@ -68,8 +59,8 @@ public class BlockAlgoProviderImpl implements BlockAlgoProvider {
 
             } else {
                 int minBlocktimeLimit = config.getMinBlockTimeLimit();
-                calculatedBaseTarget = (prevBaseTarget - prevBaseTarget * Constants.BASE_TARGET_GAMMA
-                        * (blockTime - Math.max(blocktimeAverage, minBlocktimeLimit)) / (100 * blockTime));
+                calculatedBaseTarget = (prevBaseTarget -
+                        prevBaseTarget * Constants.BASE_TARGET_GAMMA * (blockTime - Math.max(blocktimeAverage, minBlocktimeLimit)) / (100 * blockTime));
             }
             long maxBaseTarget = config.getMaxBaseTarget();
             if (calculatedBaseTarget < 0 || calculatedBaseTarget > maxBaseTarget) {
@@ -86,24 +77,7 @@ public class BlockAlgoProviderImpl implements BlockAlgoProvider {
     }
 
     @Override
-    public BigInteger calculateCumulativeDifficulty(Block block, Block previousBlock) {
-        return previousBlock.getCumulativeDifficulty().add(two64.divide(BigInteger.valueOf(block.getBaseTarget())));
+    public BigInteger calculateDifficulty(Block block, Block previousBlock) {
+        return two64.divide(BigInteger.valueOf(block.getBaseTarget()));
     }
-
-    @Override
-    public long getBlockTimeAverage(Block block, Block previousBlock) {
-        int blockchainHeight = previousBlock.getHeight();
-        Block lastBlockForTimeAverage = blockDao.findBlockAtHeight(blockchainHeight - 2);
-        if (block.getVersion() != Block.LEGACY_BLOCK_VERSION) {
-            Block intermediateBlockForTimeAverage = blockDao.findBlockAtHeight(blockchainHeight - 1);
-            int thisBlockActualTime = block.getTimestamp() - previousBlock.getTimestamp() - block.getTimeout();
-            int previousBlockTime = previousBlock.getTimestamp() - previousBlock.getTimeout() - intermediateBlockForTimeAverage.getTimestamp();
-            int secondAvgBlockTime = intermediateBlockForTimeAverage.getTimestamp()
-                    - intermediateBlockForTimeAverage.getTimeout() - lastBlockForTimeAverage.getTimestamp();
-            return  (thisBlockActualTime + previousBlockTime + secondAvgBlockTime) / 3;
-        } else {
-            return (block.getTimestamp() - lastBlockForTimeAverage.getTimestamp()) / 3;
-        }
-    }
-
 }

@@ -257,7 +257,7 @@ public final class PhasingPoll extends AbstractPoll {
         return phasingPollTable.get(phasingPollDbKeyFactory.newKey(id));
     }
 
-    static DbIterator<Transaction> getFinishingTransactions(int height) {
+    public static DbIterator<Transaction> getFinishingTransactions(int height) {
         Connection con = null;
         try {
             con = lookupDataSource().getConnection();
