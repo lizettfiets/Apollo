@@ -49,7 +49,7 @@
 
         <!--Crypto-->
         <fbcrypto.version>1.2.3</fbcrypto.version>
-        <bcprov.version>1.54</bcprov.version>
+        <bcprov.version>1.60</bcprov.version>
 
         <!--QR-code-->
         <zxing.version>3.3.0</zxing.version>
@@ -80,7 +80,6 @@
         <json-unit.version>1.20.0</json-unit.version>
         <junit.version>4.12</junit.version>
         <mockito.version>2.22.0</mockito.version>
-        <spring.version>5.0.7.RELEASE</spring.version>
         <okhttp-eventsource.version>1.8.0</okhttp-eventsource.version>
         <okhttp.version>2.7.5</okhttp.version>
         <!-- TODO: cleanup -->
@@ -121,10 +120,13 @@
                 </property>
             </activation>
             <properties>
-                <zipExecutionPahse>package</zipExecutionPahse>
+                <zipExecutionPhase>package</zipExecutionPhase>
             </properties>
             <build>
                 <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                    </resource>
                     <resource>
                         <directory>src/main/resources-dev</directory>
                     </resource>
@@ -138,10 +140,13 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <zipExecutionPahse>none</zipExecutionPahse>
+                <zipExecutionPhase>none</zipExecutionPhase>
             </properties>
             <build>
                 <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                    </resource>
                     <resource>
                         <directory>src/main/resources-dev</directory>
                     </resource>
@@ -157,10 +162,13 @@
                 </property>
             </activation>
             <properties>
-                <zipExecutionPahse>package</zipExecutionPahse>
+                <zipExecutionPhase>package</zipExecutionPhase>
             </properties>
             <build>
                 <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                    </resource>
                     <resource>
                         <directory>src/main/resources-prod</directory>
                     </resource>
@@ -312,6 +320,12 @@
                 <groupId>org.jboss.resteasy</groupId>
                 <artifactId>resteasy-validator-provider-11</artifactId>
                 <version>${resteasy.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.hibernate</groupId>
+                        <artifactId>hibernate-validator</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.jboss.resteasy</groupId>
@@ -322,6 +336,12 @@
                 <groupId>org.jboss.resteasy</groupId>
                 <artifactId>resteasy-jaxrs</artifactId>
                 <version>${resteasy.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.jboss.spec.javax.annotation</groupId>
+                        <artifactId>jboss-annotations-api_1.2_spec</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
@@ -339,6 +359,18 @@
                 <artifactId>jboss-logging-processor</artifactId>
                 <version>2.1.0.Final</version>
             </dependency>
+            <dependency>
+                <groupId>javax.transaction</groupId>
+                <artifactId>jta</artifactId>
+                <version>1.1</version>
+            </dependency>
+<!--
+            <dependency>
+                <groupId>com.atomikos</groupId>
+                <artifactId>transactions-jta</artifactId>
+                <version>4.0.6</version>
+            </dependency>
+-->
 
             <!--2fa api-->
             <dependency>
@@ -415,6 +447,12 @@
                 <groupId>org.jboss.weld.se</groupId>
                 <artifactId>weld-se-core</artifactId>
                 <version>${weld.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.jboss.spec.javax.interceptor</groupId>
+                        <artifactId>jboss-interceptors-api_1.2_spec</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.jboss.weld.servlet</groupId>
@@ -536,7 +574,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
@@ -579,6 +616,11 @@
                     <artifactId>maven-assembly-plugin</artifactId>
                     <version>3.1.0</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>3.1.0</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -601,8 +643,8 @@
                 </executions>-->
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-clean-plugin</artifactId>
-                <version>3.1.0</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

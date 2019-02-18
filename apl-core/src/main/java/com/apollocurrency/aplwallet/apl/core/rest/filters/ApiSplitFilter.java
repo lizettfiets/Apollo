@@ -15,6 +15,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +25,12 @@ import org.slf4j.LoggerFactory;
  * @author alukin@gmail.com
  */
 public class ApiSplitFilter implements Filter{
-     
+    /**
+     * this is just a "fuse" to disable API calls while core is starting.
+     * Should be removed as soon as all API will be on RestEasy
+     */
+    public static boolean isCoreReady = false;
+    
     static final Logger logger = LoggerFactory.getLogger(ApiSplitFilter.class);
     
     @Override
@@ -49,12 +55,20 @@ public class ApiSplitFilter implements Filter{
 //        resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
 
         String rqType = request.getParameter("requestType");
-           logger.trace("========= RequestType IS EMPTY!==========");
+        logger.trace("========= RequestType IS EMPTY!==========");
 
         String forwardUri = NewApiRegistry.getRestPath(rqType);
+        //forward to new API, it should be ready always because it is on CDI and 
+        //does not require completion of old static init() methods
         if(forwardUri != null && !forwardUri.isEmpty()){
            logger.trace("Request "+rqType+" forwarded to: "+forwardUri);
-           rq.getRequestDispatcher(forwardUri).forward(request, response);
+            rq.getRequestDispatcher(forwardUri).forward(request, response);
+            return;
+        }
+        if(!isCoreReady){
+           // Core is not signaled that is is ready to serve requests, so old API
+           // implementation shoud wait
+           resp.sendError(Response.Status.SERVICE_UNAVAILABLE.getStatusCode(), "Application is starting, please wait!");
            return;
         }
 

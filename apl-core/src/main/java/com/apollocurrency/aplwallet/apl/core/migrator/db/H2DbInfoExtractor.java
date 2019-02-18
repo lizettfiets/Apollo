@@ -27,8 +27,8 @@ public class H2DbInfoExtractor implements DbInfoExtractor {
     private String password;
 
     @Inject
-    public H2DbInfoExtractor(@Property(name = "apl.dbUsername", testnetName = "apl.testDbUsername") String user,
-                             @Property(name = "apl.dbPassword", testnetName = "apl.testDbPassword") String password) {
+    public H2DbInfoExtractor(@Property(name = "apl.dbUsername") String user,
+                             @Property(name = "apl.dbPassword") String password) {
         this.user = user;
         this.password = password;
     }
@@ -59,6 +59,7 @@ public class H2DbInfoExtractor implements DbInfoExtractor {
         try {
             Connection connection = dataSource.getConnection();
             connection.createStatement().execute("SHUTDOWN");
+            dataSource.dispose();
         }
         catch (SQLException e) {
             throw new RuntimeException(e.getMessage(), e);
