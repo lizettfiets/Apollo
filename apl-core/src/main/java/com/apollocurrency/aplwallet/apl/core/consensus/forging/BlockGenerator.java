@@ -4,12 +4,14 @@
 
 package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
-public interface BlockGenerator<T> {
-    T startGeneration(T generator);
+import com.apollocurrency.aplwallet.apl.core.app.Block;
 
-    T stopGeneration(T generator);
+public interface BlockGenerator {
+    Generator startGeneration(Generator generator);
 
-    boolean stopAll();
+    Generator stopGeneration(Generator generator);
+
+    int stopAll();
 
     boolean suspendAll();
 
@@ -18,5 +20,7 @@ public interface BlockGenerator<T> {
     void performGenerationIteration();
 
     void setGenerationDelay(int delay);
+
+    boolean canGenerateBetterBlock(long prevBlockId, Block anotherBlock);
 
 }

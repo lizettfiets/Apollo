@@ -20,10 +20,17 @@
 
 package com.apollocurrency.aplwallet.apl.core.app;
 
+import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
+import com.apollocurrency.aplwallet.apl.core.transaction.PrunableTransaction;
 import com.apollocurrency.aplwallet.apl.core.transaction.TransactionType;
+import com.apollocurrency.aplwallet.apl.core.transaction.UnconfirmedTransactionService;
+import com.apollocurrency.aplwallet.apl.crypto.Convert;
+import com.apollocurrency.aplwallet.apl.util.AplException;
+import com.apollocurrency.aplwallet.apl.util.Filter;
+import com.apollocurrency.aplwallet.apl.util.ReadWriteUpdateLock;
+import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
 
-import javax.enterprise.inject.spi.CDI;
-import javax.inject.Singleton;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -35,16 +42,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.apollocurrency.aplwallet.apl.core.transaction.PrunableTransaction;
-import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
-import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
-import com.apollocurrency.aplwallet.apl.crypto.Convert;
-import com.apollocurrency.aplwallet.apl.util.AplException;
-import com.apollocurrency.aplwallet.apl.util.Filter;
-import com.apollocurrency.aplwallet.apl.util.ReadWriteUpdateLock;
-import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
+import javax.enterprise.inject.spi.CDI;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 @Singleton
 public class BlockchainImpl implements Blockchain {
@@ -54,17 +54,20 @@ public class BlockchainImpl implements Blockchain {
     private BlockchainConfig blockchainConfig; // = CDI.current().select(BlockchainConfig.class).get();
     private EpochTime timeService; // = CDI.current().select(EpochTime.class).get();
     private PropertiesHolder propertiesHolder; // = CDI.current().select(PropertiesHolder.class).get();
-
+    private UnconfirmedTransactionService unconfirmedTransactionService;
     public BlockchainImpl() {        
     }
     
     @Inject
-    public BlockchainImpl(BlockDao blockDao, TransactionDao transactionDao, BlockchainConfig blockchainConfig, EpochTime timeService, PropertiesHolder propertiesHolder) {
+    public BlockchainImpl(BlockDao blockDao, TransactionDao transactionDao, BlockchainConfig blockchainConfig, EpochTime timeService,
+                          PropertiesHolder propertiesHolder, UnconfirmedTransactionService unconfirmedTransactionService) {
         this.blockDao = blockDao;
         this.transactionDao = transactionDao;
         this.blockchainConfig = blockchainConfig;
         this.timeService = timeService;
         this.propertiesHolder = propertiesHolder;
+        this.unconfirmedTransactionService = unconfirmedTransactionService;
+
     }
     
 
@@ -298,6 +301,17 @@ public class BlockchainImpl implements Blockchain {
     }
 
     @Override
+    public Block getBlockWithTransactions(int height) {
+        Block block = lookupBlockDao().findBlockAtHeight(height);
+        List<Transaction> transactions = Collections.unmodifiableList(transactionDao.findBlockTransactions(block.getId()));
+        for (Transaction transaction : transactions) {
+            transaction.setBlock(block);
+        }
+        block.setTransactions(transactions);
+        return block;
+    }
+
+    @Override
     public Block getECBlock(int timestamp) {
         Block block = getLastBlock(timestamp);
         if (block == null) {
@@ -440,7 +454,6 @@ public class BlockchainImpl implements Blockchain {
     @Override
     public List<Transaction> getExpectedTransactions(Filter<Transaction> filter) {
         Map<TransactionType, Map<String, Integer>> duplicates = new HashMap<>();
-        BlockchainProcessor blockchainProcessor = CDI.current().select(BlockchainProcessorImpl.class).get();
         List<Transaction> result = new ArrayList<>();
         readLock();
         try {
@@ -456,7 +469,7 @@ public class BlockchainImpl implements Blockchain {
                 }
             }
 
-            blockchainProcessor.selectUnconfirmedTransactions(duplicates, getLastBlock(), -1).forEach(
+            unconfirmedTransactionService.selectUnconfirmedTransactions(duplicates, getLastBlock(), -1).forEach(
                     unconfirmedTransaction -> {
                         Transaction transaction = unconfirmedTransaction.getTransaction();
                         if (transaction.getPhasing() == null && filter.test(transaction)) {

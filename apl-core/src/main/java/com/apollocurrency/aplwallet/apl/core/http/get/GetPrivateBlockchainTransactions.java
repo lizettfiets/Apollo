@@ -6,24 +6,23 @@ package com.apollocurrency.aplwallet.apl.core.http.get;
 
 import static com.apollocurrency.aplwallet.apl.core.http.JSONResponses.MISSING_SECRET_PHRASE_AND_PUBLIC_KEY;
 
-import javax.servlet.http.HttpServletRequest;
-
+import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
+import com.apollocurrency.aplwallet.apl.core.app.Transaction;
+import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
 import com.apollocurrency.aplwallet.apl.core.http.API;
 import com.apollocurrency.aplwallet.apl.core.http.APITag;
 import com.apollocurrency.aplwallet.apl.core.http.AbstractAPIRequestHandler;
 import com.apollocurrency.aplwallet.apl.core.http.JSONData;
 import com.apollocurrency.aplwallet.apl.core.http.ParameterParser;
-import com.apollocurrency.aplwallet.apl.util.AplException;
-import com.apollocurrency.aplwallet.apl.core.app.Block;
-import com.apollocurrency.aplwallet.apl.core.app.Transaction;
 import com.apollocurrency.aplwallet.apl.core.transaction.Payment;
-import com.apollocurrency.aplwallet.apl.core.transaction.TransactionType;
-import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
+import com.apollocurrency.aplwallet.apl.util.AplException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONStreamAware;
+
+import javax.servlet.http.HttpServletRequest;
 
 public final class GetPrivateBlockchainTransactions extends AbstractAPIRequestHandler {
 
@@ -68,7 +67,7 @@ public final class GetPrivateBlockchainTransactions extends AbstractAPIRequestHa
         JSONArray transactions = new JSONArray();
         Blockchain blockchain = lookupBlockchain();
         if (height != -1) {
-            Block block = blockchain.getBlockAtHeight(height);
+            Block block = blockchain.getBlockWithTransactions(height);
             block.getTransactions().forEach(transaction -> {
                 if (transaction.getType() == Payment.PRIVATE) {
 

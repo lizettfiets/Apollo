@@ -22,7 +22,8 @@ package com.apollocurrency.aplwallet.apl.core.http.get;
 
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
-import com.apollocurrency.aplwallet.apl.core.app.Generator;
+import com.apollocurrency.aplwallet.apl.core.consensus.forging.ActiveGenerators;
+import com.apollocurrency.aplwallet.apl.core.consensus.forging.Generator;
 import com.apollocurrency.aplwallet.apl.core.http.APITag;
 import com.apollocurrency.aplwallet.apl.core.http.AbstractAPIRequestHandler;
 import com.apollocurrency.aplwallet.apl.core.http.JSONData;
@@ -31,8 +32,10 @@ import com.apollocurrency.aplwallet.apl.util.AplException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONStreamAware;
-import javax.servlet.http.HttpServletRequest;
+
 import java.util.List;
+import javax.enterprise.inject.spi.CDI;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * <p>
@@ -76,6 +79,8 @@ public final class GetNextBlockGeneratorsTemp extends AbstractAPIRequestHandler 
         return GetNextBlockGeneratorsTempHolder.INSTANCE;
     }
 
+    private final ActiveGenerators ag = CDI.current().select(ActiveGenerators.class).get();
+
     private GetNextBlockGeneratorsTemp() {
         super(new APITag[] {APITag.FORGING}, "limit");
     }
@@ -91,10 +96,10 @@ public final class GetNextBlockGeneratorsTemp extends AbstractAPIRequestHandler 
             response.put("timestamp", lastBlock.getTimestamp());
             response.put("height", lastBlock.getHeight());
             response.put("lastBlock", Long.toUnsignedString(lastBlock.getId()));
-            List<Generator.ActiveGenerator> activeGenerators = Generator.getNextGenerators();
+            List<Generator> activeGenerators = ag.getNextGenerators();
             response.put("activeCount", activeGenerators.size());
             JSONArray generators = new JSONArray();
-            for (Generator.ActiveGenerator generator : activeGenerators) {
+            for (Generator generator : activeGenerators) {
                 if (generator.getHitTime() > Integer.MAX_VALUE) {
                     break;
                 }

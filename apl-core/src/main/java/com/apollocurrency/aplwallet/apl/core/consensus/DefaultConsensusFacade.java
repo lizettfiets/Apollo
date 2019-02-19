@@ -8,6 +8,7 @@ import com.apollocurrency.aplwallet.apl.core.account.Account;
 import com.apollocurrency.aplwallet.apl.core.account.AccountService;
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.BlockImpl;
+import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
 import com.apollocurrency.aplwallet.apl.core.app.TransactionImpl;
 import com.apollocurrency.aplwallet.apl.core.app.UnconfirmedTransaction;
@@ -15,6 +16,7 @@ import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.chainid.HeightConfig;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerationAlgoProvider;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.Generator;
+import com.apollocurrency.aplwallet.apl.core.transaction.TransactionType;
 import com.apollocurrency.aplwallet.apl.core.transaction.UnconfirmedTransactionService;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
 import com.apollocurrency.aplwallet.apl.util.Pair;
@@ -25,120 +27,137 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 
 public class DefaultConsensusFacade implements ConsensusFacade {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultConsensusFacade.class);
 
-        private BlockchainConfig blockchainConfig;
-        private BlockAlgoProvider blockAlgoProvider;
-        private BlockGenerationAlgoProvider generationAlgoProvider;
-        private AccountService accountService;
-        private UnconfirmedTransactionService unconfirmedTransactionService;
+    private BlockchainConfig blockchainConfig;
+    private BlockAlgoProvider blockAlgoProvider;
+    private BlockGenerationAlgoProvider generationAlgoProvider;
+    private AccountService accountService;
+    private UnconfirmedTransactionService unconfirmedTransactionService;
+    private BlockAcceptor blockAcceptor;
 
-        public DefaultConsensusFacade(BlockchainConfig blockchainConfig, BlockAlgoProvider blockAlgoProvider, BlockGenerationAlgoProvider generationAlgoProvider,
-                                      AccountService accountService, UnconfirmedTransactionService unconfirmedTransactionService) {
-            this.blockchainConfig = blockchainConfig;
-            this.blockAlgoProvider = blockAlgoProvider;
-            this.generationAlgoProvider = generationAlgoProvider;
-            this.accountService = accountService;
-            this.unconfirmedTransactionService = unconfirmedTransactionService;
+    public DefaultConsensusFacade(BlockchainConfig blockchainConfig, BlockAlgoProvider blockAlgoProvider, BlockGenerationAlgoProvider generationAlgoProvider, AccountService accountService, UnconfirmedTransactionService unconfirmedTransactionService, BlockAcceptor blockAcceptor) {
+        this.blockchainConfig = blockchainConfig;
+        this.blockAlgoProvider = blockAlgoProvider;
+        this.generationAlgoProvider = generationAlgoProvider;
+        this.accountService = accountService;
+        this.unconfirmedTransactionService = unconfirmedTransactionService;
+        this.blockAcceptor = blockAcceptor;
+    }
+
+    @Override
+    public void setPreviousBlock(Block block, List<Block> prevBlocks) {
+        Block prevBlock = prevBlocks.get(prevBlocks.size() - 1);
+        block.setHeight(prevBlock.getHeight() + 1);
+        // calculate base target
+        HeightConfig config = blockchainConfig.getCurrentConfig();
+        List<Block> blocks = new ArrayList<>(prevBlocks);
+        blocks.add(block);
+        long blockTimeAverage = blockAlgoProvider.getBlockTimeAverage(blocks);
+        long baseTarget = blockAlgoProvider.calculateBaseTarget(prevBlock, blockTimeAverage, config);
+        block.setBaseTarget(baseTarget);
+        // calculate diff
+        BigInteger difficulty = blockAlgoProvider.calculateDifficulty(block, prevBlock);
+        BigInteger cumulativeDifficulty = prevBlock.getCumulativeDifficulty().add(difficulty);
+        block.setCumulativeDifficulty(cumulativeDifficulty);
+        short index = 0;
+        for (Transaction transaction : block.getTransactions()) {
+            transaction.setBlock(block);
+            transaction.setIndex(index++);
         }
+    }
 
-        @Override
-        public void setPreviousBlock(Block block, List<Block> prevBlocks) {
-            Block prevBlock = prevBlocks.get(prevBlocks.size() - 1);
-            block.setHeight(prevBlock.getHeight() + 1);
-            // calculate base target
-            HeightConfig config = blockchainConfig.getCurrentConfig();
-            List<Block> blocks = new ArrayList<>(prevBlocks);
-            blocks.add(block);
-            long blockTimeAverage = blockAlgoProvider.getBlockTimeAverage(blocks);
-            long baseTarget = blockAlgoProvider.calculateBaseTarget(prevBlock, blockTimeAverage, config);
-            block.setBaseTarget(baseTarget);
-            // calculate diff
-            BigInteger difficulty = blockAlgoProvider.calculateDifficulty(block, prevBlock);
-            BigInteger cumulativeDifficulty = prevBlock.getCumulativeDifficulty().add(difficulty);
-            block.setCumulativeDifficulty(cumulativeDifficulty);
+    @Override
+    public List<Transaction> acceptBlock(Block block, List<Transaction> validPhasedTransactions, List<Transaction> invalidPhasedTransactions, Map<TransactionType, Map<String, Integer>> duplicates) throws BlockchainProcessor.TransactionNotAcceptedException {
+        return blockAcceptor.accept(block, validPhasedTransactions, invalidPhasedTransactions, duplicates);
+    }
+
+    /**
+     * Update generator data from the last block.
+     */
+    @Override
+    public void updateGeneratorData(Generator generator, Block lastBlock) {
+        int height = lastBlock.getHeight();
+        Account account = accountService.getAccount(generator.getAccountId(), height);
+        if (account == null) {
+            generator.setEffectiveBalance(BigInteger.ZERO);
+        } else {
+            generator.setEffectiveBalance(BigInteger.valueOf(Math.max(account.getEffectiveBalanceAPL(height), 0)));
         }
-
-        /**
-         * Update generator data from the last block.
-         */
-        @Override
-        public void updateGeneratorData(Generator generator, Block lastBlock) {
-            int height = lastBlock.getHeight();
-            Account account = accountService.getAccount(generator.getAccountId(), height);
-            if (account == null) {
-                generator.setEffectiveBalance(BigInteger.ZERO);
-            } else {
-                generator.setEffectiveBalance(BigInteger.valueOf(Math.max(account.getEffectiveBalanceAPL(height), 0)));
-            }
-            if (generator.getEffectiveBalance().signum() == 0) {
-                generator.setHitTime(0);
-                generator.setHit(BigInteger.ZERO);
-                return;
-            }
-            generator.setHit(generationAlgoProvider.calculateHit(generator.getPublicKey(), lastBlock));
-            generator.setHitTime(generationAlgoProvider.getHitTime(generator.getEffectiveBalance(), generator.getHit(), lastBlock));
-            generator.setDeadline(Math.max(generator.getHitTime() - lastBlock.getTimestamp(), 0));
+        if (generator.getEffectiveBalance().signum() == 0) {
+            generator.setHitTime(0);
+            generator.setHit(BigInteger.ZERO);
+            return;
         }
+        byte[] generationSignatureHash = generationAlgoProvider.calculateGenerationSignature(generator.getPublicKey(), lastBlock);
+        generator.setHit(generationAlgoProvider.calculateHit(generationSignatureHash));
+        generator.setHitTime(generationAlgoProvider.getHitTime(generator.getEffectiveBalance(), generator.getHit(), lastBlock));
+        generator.setDeadline(Math.max(generator.getHitTime() - lastBlock.getTimestamp(), 0));
+    }
 
-        @Override
-        public Block generateBlock(Generator forger, Block lastBlock, int currentTimeWithForgingDelay) {
-            Block res = null;
-            if (forger.getHitTime() <= currentTimeWithForgingDelay) {
-                int potentialBlockTimestamp = generationAlgoProvider.getBlockTimestamp(forger.getHitTime(), currentTimeWithForgingDelay);
-                Pair<Integer, Integer> timeoutAndVersion = generationAlgoProvider.getBlockTimeoutAndVersion(potentialBlockTimestamp,
-                        currentTimeWithForgingDelay,
-                        lastBlock);
-                if (timeoutAndVersion != null) {
-                    int timeout = timeoutAndVersion.getFirst();
-                    int version = timeoutAndVersion.getSecond();
-                    log.trace("Timeout: {}, version: {}, Forger account: {}", timeout, version, forger.getAccountId());
+    @Override
+    public Block generateBlock(Generator forger, Block lastBlock, int generationTimestamp) {
+        Block res = null;
+        if (forger.getHitTime() <= generationTimestamp) {
+            int potentialBlockTimestamp = generationAlgoProvider.getBlockTimestamp(forger.getHitTime(), generationTimestamp);
+            int numberOfTxsAtGenerationTimestamp = unconfirmedTransactionService.getUnconfirmedTransactions(lastBlock, generationTimestamp).size();
+            int numberOfTxsAtBlockTimestamp = unconfirmedTransactionService.getUnconfirmedTransactions(lastBlock, generationTimestamp).size();
 
-                    if (!generationAlgoProvider.verifyHit(forger.getHit(), forger.getEffectiveBalance(), lastBlock, potentialBlockTimestamp)) {
-                        log.debug(this.toString() + " failed to forge at " + (potentialBlockTimestamp + timeout) + " height " + lastBlock.getHeight() + " " +
-                                "last " +
-                                "timestamp " + lastBlock.getTimestamp());
-                    } else {
-                        res = createBlock(forger.getKeySeed(), lastBlock, potentialBlockTimestamp + timeout, timeout,version);
-                        long id = blockAlgoProvider.calculateId(res);
-                        res.setId(id);
-                    }
+            Pair<Integer, Integer> timeoutAndVersion = generationAlgoProvider.getBlockTimeoutAndVersion(potentialBlockTimestamp,
+                    generationTimestamp,
+                    lastBlock.getTimestamp(), numberOfTxsAtBlockTimestamp, numberOfTxsAtGenerationTimestamp);
+
+            if (timeoutAndVersion != null) {
+                int timeout = timeoutAndVersion.getFirst();
+                int version = timeoutAndVersion.getSecond();
+                log.trace("Timeout: {}, version: {}, Forger account: {}", timeout, version, forger.getAccountId());
+
+                if (!generationAlgoProvider.verifyHit(forger.getHit(), forger.getEffectiveBalance(), lastBlock, potentialBlockTimestamp)) {
+                    log.debug(this.toString() + " failed to forge at " + (potentialBlockTimestamp + timeout) + " height " + lastBlock.getHeight() + " " +
+                            "last " +
+                            "timestamp " + lastBlock.getTimestamp());
+                } else {
+                    res = createBlock(forger.getKeySeed(), lastBlock, potentialBlockTimestamp + timeout, timeout, version);
+                    long id = blockAlgoProvider.calculateId(res);
+                    res.setId(id);
                 }
             }
-            return res;
         }
+        return res;
+    }
 
 
-        private Block createBlock(byte[] keySeed, Block previousBlock, int blockTimestamp, int timeout, int version) {
-                SortedSet<UnconfirmedTransaction> sortedTransactions = unconfirmedTransactionService.getUnconfirmedTransactions(previousBlock,
-                        blockTimestamp);
-                List<Transaction> blockTransactions = new ArrayList<>();
-                MessageDigest digest = Crypto.sha256();
-                long totalAmountATM = 0;
-                long totalFeeATM = 0;
-                int payloadLength = 0;
-                for (UnconfirmedTransaction unconfirmedTransaction : sortedTransactions) {
-                    TransactionImpl transaction = unconfirmedTransaction.getTransaction();
-                    blockTransactions.add(transaction);
-                    digest.update(transaction.bytes());
-                    totalAmountATM += transaction.getAmountATM();
-                    totalFeeATM += transaction.getFeeATM();
-                    payloadLength += transaction.getFullSize();
-                }
-                byte[] payloadHash = digest.digest();
-                digest.update(previousBlock.getGenerationSignature());
-                final byte[] publicKey = Crypto.getPublicKey(keySeed);
-                byte[] generationSignature = digest.digest(publicKey);
-                byte[] previousBlockHash = Crypto.sha256().digest(((BlockImpl)previousBlock).getBytes());
-
-                Block block = new BlockImpl(version, blockTimestamp, previousBlock.getId(), totalAmountATM, totalFeeATM, payloadLength,
-                        payloadHash, publicKey, generationSignature, previousBlockHash, timeout, blockTransactions, keySeed);
-            return block;
+    private Block createBlock(byte[] keySeed, Block previousBlock, int blockTimestamp, int timeout, int version) {
+        SortedSet<UnconfirmedTransaction> sortedTransactions = unconfirmedTransactionService.getUnconfirmedTransactions(previousBlock,
+                blockTimestamp);
+        List<Transaction> blockTransactions = new ArrayList<>();
+        MessageDigest digest = Crypto.sha256();
+        long totalAmountATM = 0;
+        long totalFeeATM = 0;
+        int payloadLength = 0;
+        for (UnconfirmedTransaction unconfirmedTransaction : sortedTransactions) {
+            TransactionImpl transaction = unconfirmedTransaction.getTransaction();
+            blockTransactions.add(transaction);
+            digest.update(transaction.bytes());
+            totalAmountATM += transaction.getAmountATM();
+            totalFeeATM += transaction.getFeeATM();
+            payloadLength += transaction.getFullSize();
         }
+        byte[] payloadHash = digest.digest();
+        final byte[] publicKey = Crypto.getPublicKey(keySeed);
+        byte[] generationSignature = generationAlgoProvider.calculateGenerationSignature(publicKey, previousBlock);
+        byte[] previousBlockHash = Crypto.sha256().digest(((BlockImpl) previousBlock).getBytes());
+
+        Block block = new BlockImpl(version, blockTimestamp, previousBlock.getId(), totalAmountATM, totalFeeATM, payloadLength,
+                payloadHash, publicKey, generationSignature, previousBlockHash, timeout, blockTransactions, keySeed);
+        return block;
+    }
+
 
     public BlockchainConfig getBlockchainConfig() {
         return blockchainConfig;

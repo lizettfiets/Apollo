@@ -22,8 +22,8 @@ public class RegBlockExtrapolationFacade extends DefaultConsensusFacade {
     static final BigDecimal FLOAT_MULTIPLIER = BigDecimal.valueOf(1000L);
     static final BigInteger FLOAT_DIVIDER = BigInteger.valueOf(1000L);
 
-    public RegBlockExtrapolationFacade(BlockchainConfig blockchainConfig, BlockAlgoProvider blockAlgoProvider, BlockGenerationAlgoProvider generationAlgoProvider, AccountService accountService, UnconfirmedTransactionService unconfirmedTransactionService) {
-        super(blockchainConfig, blockAlgoProvider, generationAlgoProvider, accountService, unconfirmedTransactionService);
+    public RegBlockExtrapolationFacade(BlockchainConfig blockchainConfig, BlockAlgoProvider blockAlgoProvider, BlockGenerationAlgoProvider generationAlgoProvider, AccountService accountService, UnconfirmedTransactionService unconfirmedTransactionService, BlockAcceptor blockAcceptor) {
+        super(blockchainConfig, blockAlgoProvider, generationAlgoProvider, accountService, unconfirmedTransactionService, blockAcceptor);
     }
 
     @Override

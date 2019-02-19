@@ -20,6 +20,7 @@
 
 package com.apollocurrency.aplwallet.apl.core.peer;
 
+import com.apollocurrency.aplwallet.apl.core.BlockJsonConverter;
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
@@ -30,6 +31,7 @@ import org.json.simple.JSONStreamAware;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.enterprise.inject.spi.CDI;
 
 final class GetNextBlocks extends PeerServlet.PeerRequestHandler {
 
@@ -48,6 +50,7 @@ final class GetNextBlocks extends PeerServlet.PeerRequestHandler {
         TOO_MANY_BLOCKS_REQUESTED = JSON.prepare(response);
     }
 
+    private final BlockJsonConverter blockJsonConverter = CDI.current().select(BlockJsonConverter.class).get();
     private GetNextBlocks() {}
 
 
@@ -74,7 +77,7 @@ final class GetNextBlocks extends PeerServlet.PeerRequestHandler {
             }
             blocks = blockchain.getBlocksAfter(blockId, limit > 0 ? (int)limit : 36);
         }
-        blocks.forEach(block -> nextBlocksArray.add(block.getJSONObject()));
+        blocks.forEach(block -> nextBlocksArray.add(blockJsonConverter.toJson(block)));
         response.put("nextBlocks", nextBlocksArray);
 
         return response;

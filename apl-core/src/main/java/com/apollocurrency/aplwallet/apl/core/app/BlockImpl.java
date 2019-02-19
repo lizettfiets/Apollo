@@ -181,6 +181,7 @@ public final class BlockImpl implements Block {
 
     @Override
     public List<Transaction> getTransactions() {
+
         return this.blockTransactions;
     }
 
@@ -276,6 +277,16 @@ public final class BlockImpl implements Block {
         return Arrays.copyOf(bytes(), bytes.length);
     }
 
+    @Override
+    public boolean hasValidSignature() {
+        return hasValidSignature;
+    }
+
+    @Override
+    public void setHasValidSignature(boolean hasValidSignature) {
+        this.hasValidSignature = hasValidSignature;
+    }
+
     static boolean requireTimeout(int version) {
         return Block.ADAPTIVE_BLOCK_VERSION == version || Block.INSTANT_BLOCK_VERSION == version;
     }
@@ -308,39 +319,7 @@ public final class BlockImpl implements Block {
         return bytes;
     }
 
-    @Override
-    public boolean verifyBlockSignature() {
-        return checkSignature() && Account.setOrVerify(getGeneratorId(), getGeneratorPublicKey());
-    }
-
     private volatile boolean hasValidSignature = false;
-
-    private boolean checkSignature() {
-        if (! hasValidSignature) {
-            byte[] data = Arrays.copyOf(bytes(), bytes.length - 64);
-            hasValidSignature = blockSignature != null && Crypto.verify(blockSignature, data, getGeneratorPublicKey());
-        }
-        return hasValidSignature;
-    }
-
-    @Override
-    public void setPrevious(Block block) {
-        if (block != null) {
-            if (block.getId() != getPreviousBlockId()) {
-                // shouldn't happen as previous id is already verified, but just in case
-                throw new IllegalStateException("Previous block id doesn't match");
-            }
-            this.height = block.getHeight() + 1;
-//            this.calculateBaseTarget(block);
-        } else {
-            this.height = 0;
-        }
-        short index = 0;
-        for (Transaction transaction : getTransactions()) {
-            transaction.setBlock(this);
-            transaction.setIndex(index++);
-        }
-    }
 
     void loadTransactions() {
         for (Transaction transaction : getTransactions()) {

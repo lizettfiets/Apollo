@@ -6,6 +6,7 @@ package com.apollocurrency.aplwallet.apl.core;
 
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.BlockImpl;
+import com.apollocurrency.aplwallet.apl.core.app.Transaction;
 import com.apollocurrency.aplwallet.apl.core.app.TransactionImpl;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.util.AplException;
@@ -14,10 +15,14 @@ import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
-public class BlockJsonParser {
+@Singleton
+public class BlockJsonConverter {
     private BlockService service;
-    public BlockJsonParser(BlockService blockService) {
+    @Inject
+    public BlockJsonConverter(BlockService blockService) {
         this.service = blockService;
     }
 
@@ -56,7 +61,7 @@ public class BlockJsonParser {
             byte[] previousBlockHash = version == 1 ? null : Convert.parseHexString((String) blockData.get("previousBlockHash"));
             Object timeoutJsonValue = blockData.get("timeout");
             int timeout =  ((Long) timeoutJsonValue).intValue();
-            List<TransactionImpl> blockTransactions = new ArrayList<>();
+            List<Transaction> blockTransactions = new ArrayList<>();
             for (Object transactionData : (JSONArray) blockData.get("transactions")) {
                 blockTransactions.add(TransactionImpl.parseTransaction((JSONObject) transactionData));
             }

@@ -11,7 +11,7 @@ import java.math.BigInteger;
 
 public interface BlockGenerationAlgoProvider {
 
-    BigInteger calculateHit(byte[] publicKey, Block prevBlock);
+    BigInteger calculateHit(byte[] generationSignatureHash);
 
     long getHitTime(BigInteger effectiveBalance, BigInteger hit, Block block);
 
@@ -22,5 +22,8 @@ public interface BlockGenerationAlgoProvider {
      */
     int getBlockTimestamp(long hitTime, int generationTimestamp);
 
-    Pair<Integer, Integer> getBlockTimeoutAndVersion(int blockTimestamp, int generationTimestamp, Block lastBlock);
+    byte[] calculateGenerationSignature(byte[] publicKey, Block prevBlock);
+
+    Pair<Integer, Integer> getBlockTimeoutAndVersion(int blockTimestamp, int generationTimestamp, int lastBlockTimestamp,
+                                                     int numberOfTxsAtBlockTimestamp, int numberOfTxsAtGenerationTimestamp);
 }

@@ -7,30 +7,45 @@ package com.apollocurrency.aplwallet.apl.core.app;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-import java.util.Objects;
-
+import com.apollocurrency.aplwallet.apl.core.account.Account;
+import com.apollocurrency.aplwallet.apl.core.account.AccountService;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
-import com.apollocurrency.aplwallet.apl.crypto.Crypto;
+import com.apollocurrency.aplwallet.apl.util.Constants;
 import org.slf4j.Logger;
 
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.util.Arrays;
 import java.util.Objects;
 import javax.inject.Inject;
 
 public abstract class AbstractBlockValidator implements BlockValidator {
     private static final Logger LOG = getLogger(AbstractBlockValidator.class);
     private BlockDao blockDao;
-    protected BlockchainConfig blockchainConfig;
+    private BlockchainConfig blockchainConfig;
     private Blockchain blockchain;
+    private AccountService accountService;
     @Inject
-    public AbstractBlockValidator(BlockDao blockDao, BlockchainConfig blockchainConfig, Blockchain blockchain) {
+    public AbstractBlockValidator(BlockDao blockDao, BlockchainConfig blockchainConfig, Blockchain blockchain, AccountService accountService) {
         Objects.requireNonNull(blockDao, "BlockDao is null");
         Objects.requireNonNull(blockchainConfig, "Blockchain config is null");
         this.blockDao = blockDao;
         this.blockchain = blockchain;
         this.blockchainConfig = blockchainConfig;
+        this.accountService = accountService;
+    }
+
+    public AccountService getAccountService() {
+        return accountService;
+    }
+
+    public BlockDao getBlockDao() {
+        return blockDao;
+    }
+
+    public BlockchainConfig getBlockchainConfig() {
+        return blockchainConfig;
+    }
+
+    public Blockchain getBlockchain() {
+        return blockchain;
     }
 
     @Override
@@ -53,13 +68,13 @@ public abstract class AbstractBlockValidator implements BlockValidator {
         if (block.getId() == 0L || blockDao.hasBlock(block.getId(), previousLastBlock.getHeight())) {
             throw new BlockchainProcessor.BlockNotAcceptedException("Duplicate block or invalid id", block);
         }
-        if (!block.verifyGenerationSignature()) {
-            Account generatorAccount = Account.getAccount(block.getGeneratorId());
+        if (!verifyGenerationSignature(block)) {
+            Account generatorAccount = accountService.getAccount(block.getGeneratorId());
             long generatorBalance = generatorAccount == null ? 0 : generatorAccount.getEffectiveBalanceAPL();
             throw new BlockchainProcessor.BlockNotAcceptedException("Generation signature verification failed, effective balance " + generatorBalance, block);
         }
 
-        int numberOfTransactions = block.getTransactions().size();
+        int numberOfTransactions = block.getTransactions().size(); // should not throw NPE
         if (numberOfTransactions > blockchainConfig.getCurrentConfig().getMaxNumberOfTransactions()) {
             throw new BlockchainProcessor.BlockNotAcceptedException("Invalid block transaction count " + numberOfTransactions, block);
         }
@@ -84,6 +99,7 @@ public abstract class AbstractBlockValidator implements BlockValidator {
         }
     }
 
+
     abstract void validatePreviousHash(Block block, Block previousBlock) throws BlockchainProcessor.BlockNotAcceptedException;
 
     abstract void verifySignature(Block block) throws BlockchainProcessor.BlockNotAcceptedException;
@@ -94,36 +110,6 @@ public abstract class AbstractBlockValidator implements BlockValidator {
 
     abstract void validateRegularBlock(Block block, Block previousBlock) throws BlockchainProcessor.BlockNotAcceptedException;
 
-    public boolean verifyGenerationSignature(Block block) throws BlockchainProcessor.BlockOutOfOrderException {
-        try {
-            Block previousBlock = blockchain.getBlock(block.getPreviousBlockId());
-            if (previousBlock == null) {
-                throw new BlockchainProcessor.BlockOutOfOrderException("Can't verify signature because previous block is missing", block);
-            }
+    public abstract boolean verifyGenerationSignature(Block block) throws BlockchainProcessor.BlockOutOfOrderException;
 
-            Account account = Account.getAccount(block.getGeneratorId());
-            long effectiveBalance = account == null ? 0 : account.getEffectiveBalanceAPL();
-            if (effectiveBalance <= 0) {
-                return false;
-            }
-
-            MessageDigest digest = Crypto.sha256();
-            digest.update(previousBlock.getGenerationSignature());
-            byte[] actualGenerationSignature = digest.digest(block.getGeneratorPublicKey());
-            if (!Arrays.equals(block.getGenerationSignature(), actualGenerationSignature)) {
-                return false;
-            }
-
-            BigInteger hit = new BigInteger(1, new byte[]{actualGenerationSignature[7], actualGenerationSignature[6], actualGenerationSignature[5], actualGenerationSignature[4], actualGenerationSignature[3], actualGenerationSignature[2], actualGenerationSignature[1], actualGenerationSignature[0]});
-
-            return Generator.verifyHit(hit, BigInteger.valueOf(effectiveBalance), previousBlock, block.getTimestamp() - block.getTimeout());
-
-        } catch (RuntimeException e) {
-
-            LOG.info("Error verifying block generation signature", e);
-            return false;
-
-        }
-
-    }
 }

@@ -62,7 +62,7 @@ public interface Block {
     int getPayloadLength();
 
     byte[] getPayloadHash();
-
+    // should not retrieve data from db
     List<Transaction> getTransactions();
 
     void setTransactions(List<Transaction> transactions);
@@ -81,9 +81,9 @@ public interface Block {
 
     byte[] getBytes();
 
-    boolean verifyBlockSignature();
+    boolean hasValidSignature();
 
-    void setPrevious(Block block);
+    void setHasValidSignature(boolean hasValidSignature);
 
     int getTimeout();
 }

@@ -55,8 +55,6 @@ public interface BlockchainProcessor extends Observable<Block,BlockchainProcesso
     void fullReset();
 
 
-    void generateBlock(byte[] keySeed, int blockTimestamp, int timeout, int blockVersion) throws BlockNotAcceptedException;
-
     void scan(int height, boolean validate);
 
     void fullScanWithShutdown();
@@ -77,11 +75,13 @@ public interface BlockchainProcessor extends Observable<Block,BlockchainProcesso
 
     long getGenesisBlockId();
 
+    void trySaveGeneratedBlock(Block block) throws BlockNotAcceptedException;
+
     class BlockNotAcceptedException extends AplException {
 
         private final Block block;
 
-        BlockNotAcceptedException(String message, Block block) {
+        public BlockNotAcceptedException(String message, Block block) {
             super(message);
             this.block = block;
         }
@@ -102,12 +102,12 @@ public interface BlockchainProcessor extends Observable<Block,BlockchainProcesso
 
         private final Transaction transaction;
 
-        TransactionNotAcceptedException(String message, Transaction transaction) {
+        public TransactionNotAcceptedException(String message, Transaction transaction) {
             super(message, transaction.getBlock());
             this.transaction = transaction;
         }
 
-        TransactionNotAcceptedException(Throwable cause, Transaction transaction) {
+        public TransactionNotAcceptedException(Throwable cause, Transaction transaction) {
             super(cause, transaction.getBlock());
             this.transaction = transaction;
         }
@@ -124,7 +124,7 @@ public interface BlockchainProcessor extends Observable<Block,BlockchainProcesso
 
     class BlockOutOfOrderException extends BlockNotAcceptedException {
 
-        BlockOutOfOrderException(String message, Block block) {
+        public BlockOutOfOrderException(String message, Block block) {
             super(message, block);
         }
 

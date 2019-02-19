@@ -13,6 +13,7 @@ import com.apollocurrency.aplwallet.apl.core.app.TransactionProcessor;
 import com.apollocurrency.aplwallet.apl.core.app.TransactionProcessorImpl;
 import com.apollocurrency.aplwallet.apl.core.app.UnconfirmedTransaction;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.apollocurrency.aplwallet.apl.core.consensus.ReferencedTransactionVerifier;
 import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
 import com.apollocurrency.aplwallet.apl.core.db.FilteringIterator;
 import com.apollocurrency.aplwallet.apl.util.AplException;
@@ -34,14 +35,15 @@ public class UnconfirmedTransactionServiceImpl implements UnconfirmedTransaction
             .thenComparingLong(UnconfirmedTransaction::getId);
 
     private static final int TRANSACTION_VERSION = 1;
-    public static final int MAX_REFERENCED_TRANSACTIONS = 10;
 
     private BlockchainConfig blockchainConfig;
     private TransactionProcessor transactionProcessor;
     private Blockchain blockchain;
+    private ReferencedTransactionVerifier referencedTransactionVerifier;
 
-    public UnconfirmedTransactionServiceImpl(BlockchainConfig blockchainConfig) {
+    public UnconfirmedTransactionServiceImpl(BlockchainConfig blockchainConfig, ReferencedTransactionVerifier referencedTransactionVerifier) {
         this.blockchainConfig = blockchainConfig;
+        this.referencedTransactionVerifier = referencedTransactionVerifier;
     }
 
     public SortedSet<UnconfirmedTransaction> getUnconfirmedTransactions(Block previousBlock, int blockTimestamp) {
@@ -68,7 +70,7 @@ public class UnconfirmedTransactionServiceImpl implements UnconfirmedTransaction
         DbIterator<UnconfirmedTransaction> allUnconfirmedTransactions = lookupTransactionProcessor().getAllUnconfirmedTransactions();
         try (FilteringIterator<UnconfirmedTransaction> unconfirmedTransactions = new FilteringIterator<>(
                 allUnconfirmedTransactions,
-                transaction -> hasAllReferencedTransactions(
+                transaction -> referencedTransactionVerifier.hasAllReferencedTransactions(
                         transaction.getTransaction(),
                         transaction.getTimestamp(), 0))) {
             for (UnconfirmedTransaction unconfirmedTransaction : unconfirmedTransactions) {
@@ -108,15 +110,6 @@ public class UnconfirmedTransactionServiceImpl implements UnconfirmedTransaction
             }
         }
         return sortedTransactions;
-    }
-    boolean hasAllReferencedTransactions(Transaction transaction, int timestamp, int count) {
-        if (transaction.referencedTransactionFullHash() == null) {
-            return timestamp - transaction.getTimestamp() < Constants.MAX_REFERENCED_TRANSACTION_TIMESPAN && count < MAX_REFERENCED_TRANSACTIONS;
-        }
-        Transaction referencedTransaction = lookupBlockhain().findTransactionByFullHash(transaction.referencedTransactionFullHash());
-        return referencedTransaction != null
-                && referencedTransaction.getHeight() < transaction.getHeight()
-                && hasAllReferencedTransactions(referencedTransaction, timestamp, count + 1);
     }
     private TransactionProcessor lookupTransactionProcessor() {
         if (transactionProcessor == null) transactionProcessor = CDI.current().select(TransactionProcessorImpl.class).get();

@@ -5,32 +5,39 @@
 package com.apollocurrency.aplwallet.apl.core;
 
 import com.apollocurrency.aplwallet.apl.core.account.Account;
+import com.apollocurrency.aplwallet.apl.core.account.AccountService;
 import com.apollocurrency.aplwallet.apl.core.account.LedgerEvent;
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.BlockDao;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
-import com.apollocurrency.aplwallet.apl.core.app.TransactionImpl;
 import com.apollocurrency.aplwallet.apl.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BlockApplierImpl {
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
+public class BlockApplierImpl implements BlockApplier {
     private static final Logger LOG = LoggerFactory.getLogger(BlockApplierImpl.class);
 
     private BlockDao blockDao;
+    private AccountService accountService;
 
-    public BlockApplierImpl(BlockDao blockDao) {
+    @Inject
+    public BlockApplierImpl(BlockDao blockDao, AccountService accountService) {
         this.blockDao = blockDao;
+        this.accountService = accountService;
     }
 
     public void apply(Block block) {
-        Account generatorAccount = Account.addOrGetAccount(block.getGeneratorId());
+        Account generatorAccount = accountService.addOrGetAccount(block.getGeneratorId());
         generatorAccount.apply(block.getGeneratorPublicKey());
         long totalBackFees = 0;
         if (block.getHeight() > 3) {
             long[] backFees = new long[3];
             for (Transaction transaction : block.getTransactions()) {
-                long[] fees = ((TransactionImpl)transaction).getBackFees();
+                long[] fees = transaction.getBackFees();
                 for (int i = 0; i < fees.length; i++) {
                     backFees[i] += fees[i];
                 }
@@ -40,7 +47,7 @@ public class BlockApplierImpl {
                     break;
                 }
                 totalBackFees += backFees[i];
-                Account previousGeneratorAccount = Account.getAccount(blockDao.findBlockAtHeight(block.getHeight() - i - 1).getGeneratorId());
+                Account previousGeneratorAccount = accountService.getAccount(blockDao.findBlockAtHeight(block.getHeight() - i - 1).getGeneratorId());
                 LOG.debug("Back fees {} coins to forger at height {}", ((double)backFees[i])/ Constants.ONE_APL,
                         block.getHeight() - i - 1);
                 previousGeneratorAccount.addToBalanceAndUnconfirmedBalanceATM(LedgerEvent.BLOCK_GENERATED, block.getId(), backFees[i]);

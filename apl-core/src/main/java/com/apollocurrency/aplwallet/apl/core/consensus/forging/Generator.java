@@ -26,6 +26,12 @@ public class Generator implements Comparable<Generator> {
         this.accountId = Convert.getId((publicKey));
     }
 
+    public Generator(byte[] keySeed, byte[] publicKey, Long accountId) {
+        this.keySeed = keySeed;
+        this.publicKey = publicKey;
+        this.accountId = accountId;
+    }
+
     public Long getAccountId() {
         return accountId;
     }

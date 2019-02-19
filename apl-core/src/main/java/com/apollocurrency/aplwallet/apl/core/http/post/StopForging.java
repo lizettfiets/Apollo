@@ -20,9 +20,8 @@
 
 package com.apollocurrency.aplwallet.apl.core.http.post;
 
-import javax.servlet.http.HttpServletRequest;
-
-import com.apollocurrency.aplwallet.apl.core.app.Generator;
+import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerator;
+import com.apollocurrency.aplwallet.apl.core.consensus.forging.Generator;
 import com.apollocurrency.aplwallet.apl.core.http.API;
 import com.apollocurrency.aplwallet.apl.core.http.APITag;
 import com.apollocurrency.aplwallet.apl.core.http.AbstractAPIRequestHandler;
@@ -30,6 +29,9 @@ import com.apollocurrency.aplwallet.apl.core.http.ParameterException;
 import com.apollocurrency.aplwallet.apl.core.http.ParameterParser;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONStreamAware;
+
+import javax.enterprise.inject.spi.CDI;
+import javax.servlet.http.HttpServletRequest;
 
 
 public final class StopForging extends AbstractAPIRequestHandler {
@@ -46,18 +48,18 @@ public final class StopForging extends AbstractAPIRequestHandler {
         super(new APITag[] {APITag.FORGING}, "secretPhrase", "adminPassword");
     }
 
+    private final BlockGenerator blockGenerator = CDI.current().select(BlockGenerator.class).get();
     @Override
     public JSONStreamAware processRequest(HttpServletRequest req) throws ParameterException {
         long accountId = ParameterParser.getAccountId(req, vaultAccountName(), false);
         byte[] keySeed = ParameterParser.getKeySeed(req, accountId, false);
         JSONObject response = new JSONObject();
         if (keySeed != null) {
-            Generator generator = Generator.stopForging(keySeed);
+            Generator generator = blockGenerator.stopGeneration(new Generator(keySeed));
             response.put("foundAndStopped", generator != null);
-            response.put("forgersCount", Generator.getGeneratorCount());
         } else {
             API.verifyPassword(req);
-            int count = Generator.stopForging();
+            int count = blockGenerator.stopAll();
             response.put("stopped", count);
         }
         return response;

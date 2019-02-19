@@ -112,6 +112,8 @@ public interface Transaction {
 
     void setBlock(Block block);
 
+    long[] getBackFees();
+
     void unsetBlock();
 
     short getIndex();
