@@ -104,7 +104,7 @@ public class BlockchainConfig {
     }
 
     public long getLastKnownBlockHeight() {
-        return lastKnownBlockHeight;
+        return chain.getLastKnownBlockHeight();
     }
 
     public long getUnconfirmedPoolDepositAtm() {

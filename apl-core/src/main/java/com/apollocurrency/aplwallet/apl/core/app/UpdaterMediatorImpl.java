@@ -4,25 +4,24 @@
 
 package com.apollocurrency.aplwallet.apl.core.app;
 
-import com.apollocurrency.aplwallet.apl.core.transaction.Update;
-import com.apollocurrency.aplwallet.apl.core.db.TransactionalDataSource;
-
-import com.apollocurrency.aplwallet.apl.util.Version;
-import com.apollocurrency.aplwallet.apl.util.Constants;
 import static org.slf4j.LoggerFactory.getLogger;
 
-import javax.enterprise.inject.spi.CDI;
-import javax.inject.Singleton;
+import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerator;
+import com.apollocurrency.aplwallet.apl.core.db.TransactionalDataSource;
+import com.apollocurrency.aplwallet.apl.core.peer.Peers;
+import com.apollocurrency.aplwallet.apl.core.transaction.Update;
+import com.apollocurrency.aplwallet.apl.udpater.intfce.UpdaterMediator;
+import com.apollocurrency.aplwallet.apl.util.AplException;
+import com.apollocurrency.aplwallet.apl.util.Constants;
+import com.apollocurrency.aplwallet.apl.util.Listener;
+import com.apollocurrency.aplwallet.apl.util.Version;
+import org.slf4j.Logger;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.util.List;
-
-import com.apollocurrency.aplwallet.apl.core.peer.Peers;
-import com.apollocurrency.aplwallet.apl.udpater.intfce.UpdaterMediator;
-import com.apollocurrency.aplwallet.apl.util.AplException;
-import com.apollocurrency.aplwallet.apl.util.Listener;
-import org.slf4j.Logger;
+import javax.enterprise.inject.spi.CDI;
+import javax.inject.Singleton;
 
 @Singleton
 public class UpdaterMediatorImpl implements UpdaterMediator {
@@ -31,6 +30,7 @@ public class UpdaterMediatorImpl implements UpdaterMediator {
     private TransactionProcessor transactionProcessor;
     private BlockchainProcessor blockchainProcessor;
     private Blockchain blockchain;
+    private BlockGenerator blockGenerator;
 
 //    @Inject
 /*
@@ -50,7 +50,7 @@ public class UpdaterMediatorImpl implements UpdaterMediator {
     @Override
     public void suspendBlockchain() {
         lookupBlockchainProcessor().suspendBlockchainDownloading();
-        Generator.suspendForging();
+        blockGenerator.suspendAll();
         Peers.suspend();
     }
 
@@ -59,7 +59,7 @@ public class UpdaterMediatorImpl implements UpdaterMediator {
         LOG.debug("Restarting peer server, blockchain processor and forging");
         lookupBlockchainProcessor().resumeBlockchainDownloading();
         Peers.resume();
-        Generator.resumeForging();
+        blockGenerator.resumeAll();
         LOG.debug("Peer server, blockchain processor and forging were restarted successfully");
     }
 

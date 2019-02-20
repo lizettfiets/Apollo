@@ -6,16 +6,22 @@ package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 
-public interface BlockGenerator {
+import java.util.Collection;
+
+public interface BlockGenerator extends Runnable {
     Generator startGeneration(Generator generator);
 
     Generator stopGeneration(Generator generator);
 
     int stopAll();
 
-    boolean suspendAll();
+    Generator getGenerator(long id);
 
-    boolean resumeAll();
+    Collection<Generator> getAllGenerators();
+
+    void suspendAll();
+
+    void resumeAll();
 
     void performGenerationIteration();
 

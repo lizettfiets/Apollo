@@ -24,7 +24,8 @@ import static com.apollocurrency.aplwallet.apl.core.http.JSONResponses.NOT_FORGI
 import static com.apollocurrency.aplwallet.apl.core.http.JSONResponses.UNKNOWN_ACCOUNT;
 
 import com.apollocurrency.aplwallet.apl.core.account.Account;
-import com.apollocurrency.aplwallet.apl.core.app.Generator;
+import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerator;
+import com.apollocurrency.aplwallet.apl.core.consensus.forging.Generator;
 import com.apollocurrency.aplwallet.apl.core.http.API;
 import com.apollocurrency.aplwallet.apl.core.http.APITag;
 import com.apollocurrency.aplwallet.apl.core.http.AbstractAPIRequestHandler;
@@ -36,6 +37,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONStreamAware;
 
+import javax.enterprise.inject.spi.CDI;
 import javax.servlet.http.HttpServletRequest;
 
 
@@ -53,6 +55,7 @@ public final class GetForging extends AbstractAPIRequestHandler {
         super(new APITag[] {APITag.FORGING}, "secretPhrase", "adminPassword", "publicKey");
     }
 
+    private BlockGenerator blockGenerator = CDI.current().select(BlockGenerator.class).get();
     @Override
     public JSONStreamAware processRequest(HttpServletRequest req) throws ParameterException {
         long id = ParameterParser.getAccountId(req, vaultAccountName(), false);
@@ -63,7 +66,7 @@ public final class GetForging extends AbstractAPIRequestHandler {
             if (account == null) {
                 return UNKNOWN_ACCOUNT;
             }
-            Generator generator = Generator.getGenerator(Convert.getId(publicKey));
+            Generator generator = blockGenerator.getGenerator(Convert.getId(publicKey));
             if (generator == null) {
                 return NOT_FORGING;
             }
@@ -72,7 +75,7 @@ public final class GetForging extends AbstractAPIRequestHandler {
             API.verifyPassword(req);
             JSONObject response = new JSONObject();
             JSONArray generators = new JSONArray();
-            Generator.getSortedForgers().forEach(generator -> generators.add(JSONData.generator(generator, elapsedTime)));
+            blockGenerator.getAllGenerators().forEach(generator -> generators.add(JSONData.generator(generator, elapsedTime)));
             response.put("generators", generators);
             return response;
         }

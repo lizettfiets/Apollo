@@ -3,18 +3,21 @@
  */
 package com.apollocurrency.aplwallet.apl.core.app;
 
+import com.apollocurrency.aplwallet.apl.core.BlockJsonConverter;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.peer.Peer;
 import com.apollocurrency.aplwallet.apl.util.AplException;
 import com.apollocurrency.aplwallet.apl.util.JSON;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import javax.enterprise.inject.spi.CDI;
 
 /**
  * Callable method to get the next block segment from the selected peer
@@ -41,7 +44,7 @@ public class GetNextBlocks implements Callable<List<BlockImpl>> {
      * height of the block from which we will start to download next blocks
      */
     private int startHeight;
-
+    private BlockJsonConverter blockJsonConverter = CDI.current().select(BlockJsonConverter.class).get();
     /**
      * Create the callable future
      *
@@ -103,7 +106,7 @@ public class GetNextBlocks implements Callable<List<BlockImpl>> {
         try {
             int count = stop - start;
             for (JSONObject blockData : nextBlocks) {
-                blockList.add(BlockImpl.parseBlock(blockData));
+                blockList.add(blockJsonConverter.fromJson(blockData));
                 if (--count <= 0) {
                     break;
                 }

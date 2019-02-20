@@ -10,19 +10,21 @@ import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
 import com.apollocurrency.aplwallet.apl.core.app.Time;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.apollocurrency.aplwallet.apl.core.config.Property;
 import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacade;
-import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 
-public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
+public class BlockGeneratorImpl implements BlockGenerator {
     private static final Logger LOG = LoggerFactory.getLogger(BlockGeneratorImpl.class);
     // All available generators
     private Map<Long, Generator> generators = new HashMap<>();
@@ -37,20 +39,28 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
     private BlockchainConfig blockchainConfig;
     private Time time;
     private boolean suspendGeneration;
-    private PropertiesHolder propertiesHolder;
     private ConsensusFacade consensusFacade;
+    private final int defaultGenerationDelay;
+    private final int maxNumberOfGenerators;
     private int generationDelay;
 
     @Inject
-    public BlockGeneratorImpl(Blockchain blockchain, BlockchainProcessor blockchainProcessor,
-                              BlockchainConfig blockchainConfig, Time time,
-                              PropertiesHolder propertiesHolder, ConsensusFacade consensusFacade) {
+    public BlockGeneratorImpl(Blockchain blockchain,
+                              BlockchainProcessor blockchainProcessor,
+                              BlockchainConfig blockchainConfig,
+                              Time time,
+                              ConsensusFacade consensusFacade,
+                              @Property(name = "apl.forgingDelay") int defaultGenerationDelay,
+                              @Property(name = "apl.maxNumberOfForgers") int maxNumberOfGenerators
+
+                              ) {
         this.blockchain = blockchain;
         this.blockchainProcessor = blockchainProcessor;
         this.blockchainConfig = blockchainConfig;
         this.time = time;
-        this.propertiesHolder = propertiesHolder;
-        this.generationDelay = propertiesHolder.FORGING_DELAY();
+        this.defaultGenerationDelay = defaultGenerationDelay;
+        this.generationDelay = defaultGenerationDelay;
+        this.maxNumberOfGenerators = maxNumberOfGenerators;
         this.consensusFacade = consensusFacade;
     }
 
@@ -59,6 +69,7 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
         performGenerationIteration();
     }
 
+    @Override
     public void performGenerationIteration() {
         if (suspendGeneration) {
             return;
@@ -109,7 +120,7 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
                 LOG.info("Error in block generation thread", e);
             }
         } catch (Throwable t) {
-            LOG.error("CRITICAL ERROR. PLEASE REPORT TO THE DEVELOPERS.\n" + t.toString());
+            LOG.error("CRITICAL ERROR. PLEASE REPORT TO THE DEVELOPERS." + t.toString());
             t.printStackTrace();
             System.exit(1);
         }
@@ -123,7 +134,7 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
         while (tryGenerate) {
             try {
                 blockchainProcessor.trySaveGeneratedBlock(block);
-                setGenerationDelay(propertiesHolder.FORGING_DELAY());
+                setGenerationDelay(defaultGenerationDelay);
                 tryGenerate = false;
             }
             catch (BlockchainProcessor.TransactionNotAcceptedException e) {
@@ -139,6 +150,7 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
 
 
 
+    @Override
     public void setGenerationDelay(int generationDelay) {
         this.generationDelay = generationDelay;
     }
@@ -162,31 +174,68 @@ public class BlockGeneratorImpl implements BlockGenerator<Generator>, Runnable {
 
     @Override
     public Generator startGeneration(Generator generator) {
+        if (generators.size() >= maxNumberOfGenerators) {
+            throw new RuntimeException("Cannot generate blocks with more than " + maxNumberOfGenerators + " accounts on the same node");
+        }
         Generator old = generators.putIfAbsent(generator.getAccountId(), generator);
         if (old != null) {
-            LOG.debug(old + " is already forging");
+            LOG.debug(old + " is already generate block");
             return old;
         }
+        LOG.debug(generator + " started");
         return generator;
     }
 
     @Override
     public Generator stopGeneration(Generator generator) {
-        return generators.remove(generator.getAccountId());
+        Generator oldGenerator = generators.remove(generator.getAccountId());
+        if (oldGenerator != null) {
+            blockchain.updateLock();
+            try {
+                sortedGenerators = null;
+            } finally {
+                blockchain.updateUnlock();
+            }
+            LOG.debug(generator + " stopped");
+        }
+        return generator;
     }
 
     @Override
-    public boolean stopAll() {
-        return false;
+    public void suspendAll() {
+        suspendGeneration = true;
     }
 
     @Override
-    public boolean suspendAll() {
-        return false;
+    public void resumeAll() {
+        suspendGeneration = false;
     }
 
     @Override
-    public boolean resumeAll() {
-        return false;
+    public int stopAll() {
+        int count = generators.size();
+        Iterator<Generator> iter = generators.values().iterator();
+        while (iter.hasNext()) {
+            Generator generator = iter.next();
+            iter.remove();
+            LOG.debug(generator + " stopped");
+        }
+        blockchain.updateLock();
+        try {
+            sortedGenerators = null;
+        } finally {
+            blockchain.updateUnlock();
+        }
+        return count;
+    }
+
+    @Override
+    public Generator getGenerator(long id) {
+        return generators.get(id);
+    }
+
+    @Override
+    public Collection<Generator> getAllGenerators() {
+        return Collections.unmodifiableCollection(generators.values());
     }
 }
