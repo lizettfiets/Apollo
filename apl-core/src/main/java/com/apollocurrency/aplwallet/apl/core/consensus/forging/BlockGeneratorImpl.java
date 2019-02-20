@@ -12,6 +12,7 @@ import com.apollocurrency.aplwallet.apl.core.app.Time;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.config.Property;
 import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacade;
+import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacadeHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,8 +23,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import javax.enterprise.inject.spi.CDI;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
+@Singleton
 public class BlockGeneratorImpl implements BlockGenerator {
     private static final Logger LOG = LoggerFactory.getLogger(BlockGeneratorImpl.class);
     // All available generators
@@ -39,34 +43,27 @@ public class BlockGeneratorImpl implements BlockGenerator {
     private BlockchainConfig blockchainConfig;
     private Time time;
     private boolean suspendGeneration;
-    private ConsensusFacade consensusFacade;
+    private ConsensusFacadeHolder consensusFacadeHolder;
     private final int defaultGenerationDelay;
     private final int maxNumberOfGenerators;
     private int generationDelay;
 
     @Inject
     public BlockGeneratorImpl(Blockchain blockchain,
-                              BlockchainProcessor blockchainProcessor,
                               BlockchainConfig blockchainConfig,
                               Time time,
-                              ConsensusFacade consensusFacade,
+                              ConsensusFacadeHolder consensusFacadeHolder,
                               @Property(name = "apl.forgingDelay") int defaultGenerationDelay,
                               @Property(name = "apl.maxNumberOfForgers") int maxNumberOfGenerators
 
                               ) {
         this.blockchain = blockchain;
-        this.blockchainProcessor = blockchainProcessor;
         this.blockchainConfig = blockchainConfig;
         this.time = time;
         this.defaultGenerationDelay = defaultGenerationDelay;
         this.generationDelay = defaultGenerationDelay;
         this.maxNumberOfGenerators = maxNumberOfGenerators;
-        this.consensusFacade = consensusFacade;
-    }
-
-    @Override
-    public void run() {
-        performGenerationIteration();
+        this.consensusFacadeHolder = consensusFacadeHolder;
     }
 
     @Override
@@ -89,11 +86,13 @@ public class BlockGeneratorImpl implements BlockGenerator {
                         if (lastBlock.getTimestamp() > time.getTime() - 600) {
                             Block previousBlock = blockchain.getBlock(lastBlock.getPreviousBlockId());
                             for (Generator generator : generators.values()) {
+                                ConsensusFacade consensusFacade = consensusFacadeHolder.getConsensusFacade();
                                 consensusFacade.updateGeneratorData(generator, previousBlock);
-                                int timestamp = (int) (generator.getHitTime() + 1);
-                                if (generator.getHitTime() > 0 && timestamp < lastBlock.getTimestamp() - lastBlock.getTimeout()) {
+
+                                if (generator.getHitTime() > 0 && consensusFacade.compareGeneratorAndBlockTime(generator, lastBlock,
+                                        generationLimit) < 0) {
                                     LOG.debug("Pop off: " + generator.toString() + " will pop off last block " + lastBlock.getStringId());
-                                    blockchainProcessor.popOffAndProcessTransactions(previousBlock);
+                                    lookupBlockchainProcessor().popOffAndProcessTransactions(previousBlock);
                                     lastBlock = previousBlock;
                                     lastBlockId = previousBlock.getId();
                                     break;
@@ -102,7 +101,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                         }
                         List<Generator> activeGenerators = new ArrayList<>();
                         for (Generator generator : generators.values()) {
-                            consensusFacade.updateGeneratorData(generator, lastBlock);
+                            consensusFacadeHolder.getConsensusFacade().updateGeneratorData(generator, lastBlock);
                             if (generator.getEffectiveBalance().signum() > 0) {
                                 activeGenerators.add(generator);
                             }
@@ -112,6 +111,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                     }
                     for (Generator generator : sortedGenerators) {
                         tryGenerateBlock(generator, lastBlock, generationLimit);
+                        LOG.info("Generated");
                     }
                 } finally {
                     blockchain.updateUnlock();
@@ -127,13 +127,19 @@ public class BlockGeneratorImpl implements BlockGenerator {
 
     }
 
+    private BlockchainProcessor lookupBlockchainProcessor() {
+        if (blockchainProcessor == null)
+            blockchainProcessor = CDI.current().select(BlockchainProcessor.class).get();
+        return blockchainProcessor;
+    }
+
     private void tryGenerateBlock(Generator generator, Block lastBlock, int generationLimit) throws BlockchainProcessor.BlockNotAcceptedException {
-        Block block = consensusFacade.generateBlock(generator, lastBlock, generationLimit);
+        Block block = consensusFacadeHolder.getConsensusFacade().generateBlock(generator, lastBlock, generationLimit);
         boolean tryGenerate = block != null;
         int start = time.getTime();
         while (tryGenerate) {
             try {
-                blockchainProcessor.trySaveGeneratedBlock(block);
+                lookupBlockchainProcessor().trySaveGeneratedBlock(block);
                 setGenerationDelay(defaultGenerationDelay);
                 tryGenerate = false;
             }
@@ -143,7 +149,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                     throw e;
                 }
                 // create new block
-                block = consensusFacade.generateBlock(generator, lastBlock, generationLimit);
+                block = consensusFacadeHolder.getConsensusFacade().generateBlock(generator, lastBlock, generationLimit);
             }
         }
     }
@@ -160,8 +166,9 @@ public class BlockGeneratorImpl implements BlockGenerator {
         blockchain.readLock();
         try {
             if (prevBlockId == lastBlockId && sortedGenerators != null) {
+                ConsensusFacade consensusFacade = consensusFacadeHolder.getConsensusFacade();
                 for (Generator generator : sortedGenerators) {
-                    if (generator.getHitTime()  + 1 < anotherBlock.getTimestamp() - anotherBlock.getTimeout()) {
+                    if (consensusFacade.compareGeneratorAndBlockTime(generator, anotherBlock, time.getTime()) < 0) {
                         return true;
                     }
                 }
@@ -181,6 +188,15 @@ public class BlockGeneratorImpl implements BlockGenerator {
         if (old != null) {
             LOG.debug(old + " is already generate block");
             return old;
+        }
+        blockchain.updateLock();
+        try {
+            if (blockchain.getHeight() >= blockchainConfig.getLastKnownBlockHeight()) {
+                consensusFacadeHolder.getConsensusFacade().updateGeneratorData(generator, blockchain.getLastBlock());
+            }
+            sortedGenerators = null;
+        } finally {
+            blockchain.updateUnlock();
         }
         LOG.debug(generator + " started");
         return generator;

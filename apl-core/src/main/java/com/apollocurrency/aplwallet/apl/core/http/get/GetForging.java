@@ -41,7 +41,7 @@ import javax.enterprise.inject.spi.CDI;
 import javax.servlet.http.HttpServletRequest;
 
 
-public final class GetForging extends AbstractAPIRequestHandler {
+public  class GetForging extends AbstractAPIRequestHandler {
 
     private static class GetForgingHolder {
         private static final GetForging INSTANCE = new GetForging();

@@ -44,17 +44,17 @@ public class RegBlockExtrapolationFacade extends DefaultConsensusFacade {
         long blockTime = 0;
         while (timeout > 0) {
             prevFakeBlock = newFakeBlock;
-            updateGeneratorData(forger, prevFakeBlock);
+            super.updateGeneratorData(forger, prevFakeBlock);
             blockTime = forger.getDeadline() + 1;
             fakeBlocks.add(prevFakeBlock);
-            // use constructor instead of generateBlock method to improve performance
+            // using constructor instead of generateBlock method to improve performance
             // maybe better just to calculate only base target and dont create block itself
             newFakeBlock = new BlockImpl(Block.REGULAR_BLOCK_VERSION, (int) forger.getHitTime() + 1, prevFakeBlock.getId(),
-                    0L, 0L, 0, new byte[0], block.getGeneratorPublicKey(), new byte[32], new byte[32], 0, null, forger.getKeySeed());
+                    0L, 0L, 0, new byte[32], block.getGeneratorPublicKey(), new byte[32], new byte[32], 0, null, forger.getKeySeed());
             long id = getBlockAlgoProvider().calculateId(block);
             newFakeBlock.setId(id);
             super.setPreviousBlock(newFakeBlock, fakeBlocks.subList(Math.max(0, fakeBlocks.size() - 3), fakeBlocks.size()));
-            timeout -= blockTime;
+            timeout -= blockTime; //negative is ok for partial diff calculation
         }
         block.setBaseTarget(prevFakeBlock.getBaseTarget());
         BigInteger partialDiff = calculatePartialDiff(newFakeBlock, prevFakeBlock, timeout, blockTime);
@@ -65,7 +65,7 @@ public class RegBlockExtrapolationFacade extends DefaultConsensusFacade {
         if (timeout >= 0) {
             return BigInteger.ZERO;
         }
-        long timeoutRemaining = timeout + blockTime;
+        long timeoutRemaining = timeout + blockTime; //restore timeout
         BigInteger partDiff = getBlockAlgoProvider().calculateDifficulty(block, prevBlock);
         BigInteger bigDecimal = BigDecimal.valueOf(((double) timeoutRemaining / blockTime)).multiply(FLOAT_MULTIPLIER).toBigInteger();
         partDiff = partDiff.multiply(bigDecimal).divide(FLOAT_DIVIDER);

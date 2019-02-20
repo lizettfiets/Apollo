@@ -509,7 +509,6 @@ public final class JSONData {
         json.put("timestamp", block.getTimestamp());
 
         json.put("timeout", block.getTimeout());
-        json.put("numberOfTransactions", block.getTransactions().size());
         json.put("totalFeeATM", String.valueOf(block.getTotalFeeATM()));
         json.put("payloadLength", block.getPayloadLength());
         json.put("version", block.getVersion());
@@ -527,9 +526,8 @@ public final class JSONData {
         json.put("blockSignature", Convert.toHexString(block.getBlockSignature()));
         JSONArray transactions = new JSONArray();
         Long totalAmountATM = 0L;
-        if (includeTransactions) {
-            blockService.getTransactions(block);
-        }
+        blockService.getTransactions(block);
+        json.put("numberOfTransactions", block.getTransactions().size());
         for (Transaction transaction : block.getTransactions()) {
             JSONObject transactionJson = transaction(true, transaction);
             Long amountATM = Long.parseLong((String) transactionJson.get("amountATM"));

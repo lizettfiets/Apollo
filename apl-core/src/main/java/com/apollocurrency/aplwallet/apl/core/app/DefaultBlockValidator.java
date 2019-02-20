@@ -22,8 +22,10 @@ public class DefaultBlockValidator extends AbstractBlockValidator {
     private static final Logger log = LoggerFactory.getLogger(DefaultBlockValidator.class);
     private BlockGenerationAlgoProvider blockGenerationAlgoProvider;
     @Inject
-    public DefaultBlockValidator(BlockDao blockDao, BlockchainConfig blockchainConfig, Blockchain blockchain, AccountService accountService) {
+    public DefaultBlockValidator(BlockDao blockDao, BlockchainConfig blockchainConfig, Blockchain blockchain, AccountService accountService,
+                                 BlockGenerationAlgoProvider blockGenerationAlgoProvider) {
         super(blockDao, blockchainConfig, blockchain, accountService);
+        this.blockGenerationAlgoProvider = blockGenerationAlgoProvider;
     }
 
     @Override
@@ -103,7 +105,9 @@ public class DefaultBlockValidator extends AbstractBlockValidator {
 
                 BigInteger hit = blockGenerationAlgoProvider.calculateHit(actualGenerationSignature);
 
-                return blockGenerationAlgoProvider.verifyHit(hit, BigInteger.valueOf(effectiveBalance), previousBlock, block.getTimestamp() - block.getTimeout());
+                boolean verifiedHit = blockGenerationAlgoProvider.verifyHit(hit, BigInteger.valueOf(effectiveBalance), previousBlock,
+                        block.getTimestamp() - block.getTimeout());
+                return verifiedHit;
 
             }
             catch (RuntimeException e) {

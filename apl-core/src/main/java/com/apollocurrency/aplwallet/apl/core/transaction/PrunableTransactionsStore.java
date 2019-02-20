@@ -13,6 +13,8 @@ import javax.inject.Singleton;
 public class PrunableTransactionsStore {
     private final Set<Long> prunableTransactionIds = ConcurrentHashMap.newKeySet();
 
+    public PrunableTransactionsStore() {}
+
     public void add(Long id) {
         prunableTransactionIds.add(id);
     }

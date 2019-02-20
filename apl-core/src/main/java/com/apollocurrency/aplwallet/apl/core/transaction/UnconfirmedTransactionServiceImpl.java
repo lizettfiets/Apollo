@@ -27,7 +27,10 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import javax.enterprise.inject.spi.CDI;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
+@Singleton
 public class UnconfirmedTransactionServiceImpl implements UnconfirmedTransactionService {
     private static final Comparator<UnconfirmedTransaction> transactionArrivalComparator = Comparator
             .comparingLong(UnconfirmedTransaction::getArrivalTimestamp)
@@ -41,6 +44,7 @@ public class UnconfirmedTransactionServiceImpl implements UnconfirmedTransaction
     private Blockchain blockchain;
     private ReferencedTransactionVerifier referencedTransactionVerifier;
 
+    @Inject
     public UnconfirmedTransactionServiceImpl(BlockchainConfig blockchainConfig, ReferencedTransactionVerifier referencedTransactionVerifier) {
         this.blockchainConfig = blockchainConfig;
         this.referencedTransactionVerifier = referencedTransactionVerifier;

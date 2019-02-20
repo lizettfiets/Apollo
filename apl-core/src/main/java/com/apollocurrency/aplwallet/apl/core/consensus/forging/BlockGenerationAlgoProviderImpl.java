@@ -5,7 +5,6 @@
 package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
 import com.apollocurrency.aplwallet.apl.core.app.Block;
-import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.chainid.HeightConfig;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
@@ -21,11 +20,8 @@ public class BlockGenerationAlgoProviderImpl implements BlockGenerationAlgoProvi
     private static final Logger LOG = LoggerFactory.getLogger(BlockGenerationAlgoProviderImpl.class);
 
     private final BlockchainConfig blockchainConfig;
-    private final BlockchainProcessor blockchainProcessor;
     @Inject
-    public BlockGenerationAlgoProviderImpl(BlockchainProcessor blockchainProcessor,
-                                           BlockchainConfig blockchainConfig) {
-        this.blockchainProcessor = blockchainProcessor;
+    public BlockGenerationAlgoProviderImpl(BlockchainConfig blockchainConfig) {
         this.blockchainConfig = blockchainConfig;
     }
 
@@ -50,7 +46,7 @@ public class BlockGenerationAlgoProviderImpl implements BlockGenerationAlgoProvi
         BigInteger prevTarget = effectiveBaseTarget.multiply(BigInteger.valueOf(elapsedTime - 1));
         BigInteger target = prevTarget.add(effectiveBaseTarget);
         return hit.compareTo(target) < 0
-                && (hit.compareTo(prevTarget) >= 0)
+                && hit.compareTo(prevTarget) >= 0
                 || elapsedTime > 3600;
     }
 

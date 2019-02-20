@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 
+
 public class DefaultConsensusFacade implements ConsensusFacade {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultConsensusFacade.class);
@@ -77,6 +78,11 @@ public class DefaultConsensusFacade implements ConsensusFacade {
         return blockAcceptor.accept(block, validPhasedTransactions, invalidPhasedTransactions, duplicates);
     }
 
+    @Override
+    public int compareGeneratorAndBlockTime(Generator generator, Block block, int curTime) {
+        return Integer.compare(generationAlgoProvider.getBlockTimestamp(generator.getHitTime(), curTime), block.getTimestamp() - block.getTimeout());
+    }
+
     /**
      * Update generator data from the last block.
      */
@@ -118,7 +124,8 @@ public class DefaultConsensusFacade implements ConsensusFacade {
                 log.trace("Timeout: {}, version: {}, Forger account: {}", timeout, version, forger.getAccountId());
 
                 if (!generationAlgoProvider.verifyHit(forger.getHit(), forger.getEffectiveBalance(), lastBlock, potentialBlockTimestamp)) {
-                    log.debug(this.toString() + " failed to forge at " + (potentialBlockTimestamp + timeout) + " height " + lastBlock.getHeight() + " " +
+                    log.debug(forger.toString() + " failed to forge at " + (potentialBlockTimestamp + timeout) + " height " + lastBlock.getHeight() +
+                            " " +
                             "last " +
                             "timestamp " + lastBlock.getTimestamp());
                 } else {

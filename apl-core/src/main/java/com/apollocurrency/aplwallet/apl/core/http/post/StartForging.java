@@ -33,7 +33,7 @@ import javax.enterprise.inject.spi.CDI;
 import javax.servlet.http.HttpServletRequest;
 
 
-public final class StartForging extends AbstractAPIRequestHandler {
+public class StartForging extends AbstractAPIRequestHandler {
 
     private static class StartForgingHolder {
         private static final StartForging INSTANCE = new StartForging();

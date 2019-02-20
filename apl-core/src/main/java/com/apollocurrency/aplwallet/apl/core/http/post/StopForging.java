@@ -34,7 +34,7 @@ import javax.enterprise.inject.spi.CDI;
 import javax.servlet.http.HttpServletRequest;
 
 
-public final class StopForging extends AbstractAPIRequestHandler {
+public class StopForging extends AbstractAPIRequestHandler {
 
     private static class StopForgingHolder {
         private static final StopForging INSTANCE = new StopForging();

@@ -12,9 +12,11 @@ import com.apollocurrency.aplwallet.apl.util.Constants;
 
 import java.math.BigInteger;
 import java.util.List;
+import javax.inject.Named;
 import javax.inject.Singleton;
 
 @Singleton
+@Named("newBlockAlgoProvider")
 public class BlockAlgoProviderImpl implements BlockAlgoProvider {
 
     private static final BigInteger two64 = new BigInteger("18446744073709551616");

@@ -57,7 +57,7 @@ public class BlockchainConfig {
         this.leasingDelay = 1440;
         this.minPrunableLifetime = 14 * 1440 * 60; // two weeks in seconds
         this.shufflingProcessingDeadline = (short) 100;
-        this.lastKnownBlock = 0;
+        this.lastKnownBlock = chain.getLastKnownBlockHeight();
         this.unconfirmedPoolDepositAtm = 100 * Constants.ONE_APL;
         this.shufflingDepositAtm = 1000 * Constants.ONE_APL;
         this.guaranteedBalanceConfirmations = 1440;

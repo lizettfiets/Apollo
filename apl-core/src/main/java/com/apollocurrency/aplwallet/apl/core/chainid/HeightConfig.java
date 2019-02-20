@@ -22,6 +22,7 @@ public class HeightConfig {
     private final long minBaseTarget;
     private final int minBlockTimeLimit;
     private final int maxBlockTimeLimit;
+    private final int diffAdjustingAlgo;
     private final boolean isAdaptiveForgingEnabled;
     private final int adaptiveBlockTime;
     private final Consensus.Type consensusType;
@@ -43,6 +44,11 @@ public class HeightConfig {
         this.adaptiveBlockTime = adaptiveForgingSettings.getAdaptiveBlockTime();
         this.numberOfTransactionsInAdaptiveBlock = adaptiveForgingSettings.getNumberOfTransactions();
         this.consensusType = bp.getConsensus().getType();
+        this.diffAdjustingAlgo = bp.getConsensus().getAdaptiveForgingSettings().getDiffAdjustingAlgo();
+    }
+
+    public int getDiffAdjustingAlgo() {
+        return diffAdjustingAlgo;
     }
 
     public int getMaxNumberOfTransactions() {

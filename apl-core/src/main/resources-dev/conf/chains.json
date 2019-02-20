@@ -50,7 +50,7 @@
     "symbol": "Apollo",
     "prefix": "APL",
     "project": "Apollo",
-    "lastKnowBlockHeight": 1300000,
+    "lastKnownBlockHeight": 1300000,
     "genesisLocation": "data/genesisAccounts.json",
     "blockchainProperties": [
       {
@@ -205,6 +205,7 @@
     "symbol": "Apollo",
     "prefix": "APL",
     "project": "Apollo",
+    "lastKnownBlockHeight": 0,
     "genesisLocation": "data/genesisAccounts-testnet.json",
     "blockchainProperties": [
       {
@@ -267,6 +268,7 @@
     "symbol": "Apollo",
     "prefix": "APL",
     "project": "Apollo",
+    "lastKnownBlockHeight": 0,
     "genesisLocation": "data/genesisAccounts-testnet.json",
     "blockchainProperties": [
       {
@@ -299,37 +301,23 @@
     "symbol": "Apollo",
     "prefix": "APL",
     "project": "Apollo",
+    "lastKnownBlockHeight": 0,
     "genesisLocation": "data/genesisAccounts-testnet.json",
     "blockchainProperties": [
       {
         "height": 0,
-        "maxNumberOfTransactions": 255,
-        "blockTime": 60,
-        "maxBlockTimeLimit": 67,
-        "minBlockTimeLimit": 53,
+        "maxNumberOfTransactions": 500,
+        "blockTime": 2,
+        "maxBlockTimeLimit": 4,
+        "minBlockTimeLimit": 1,
         "maxBalance": 30000000000,
         "consensus": {
           "type": "POS"
         }
       },
       {
-        "height": 2000,
-        "maxNumberOfTransactions": 300,
-        "blockTime": 2,
-        "maxBlockTimeLimit": 4,
-        "minBlockTimeLimit": 1,
-        "maxBalance": 30000000000,
-        "consensus": {
-          "type": "POS",
-          "adaptiveForgingSettings": {
-            "enabled": "true",
-            "adaptiveBlockTime": 60
-          }
-        }
-      },
-      {
-        "height": 42300,
-        "maxNumberOfTransactions": 300,
+        "height": 200,
+        "maxNumberOfTransactions": 600,
         "blockTime": 2,
         "maxBlockTimeLimit": 4,
         "minBlockTimeLimit": 1,
@@ -339,6 +327,22 @@
           "adaptiveForgingSettings": {
             "enabled": "true",
             "adaptiveBlockTime": 10
+          }
+        }
+      },
+      {
+        "height": 500,
+        "maxNumberOfTransactions": 300,
+        "blockTime": 2,
+        "maxBlockTimeLimit": 4,
+        "minBlockTimeLimit": 1,
+        "maxBalance": 30000000000,
+        "consensus": {
+          "type": "POS",
+          "adaptiveForgingSettings": {
+            "enabled": "true",
+            "adaptiveBlockTime": 10,
+            "diffAdjustingAlgo": 1
           }
         }
       }

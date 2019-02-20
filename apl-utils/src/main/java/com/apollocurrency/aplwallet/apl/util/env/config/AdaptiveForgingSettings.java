@@ -8,20 +8,23 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import java.util.Objects;
 
-@JsonPropertyOrder({"enabled", "adaptiveBlockTime", "maxAdaptiveBlockTimeLimit", "minAdaptiveBlockTimeLimit", "numberOfTransactions"})
+@JsonPropertyOrder({"enabled", "adaptiveBlockTime", "maxAdaptiveBlockTimeLimit", "minAdaptiveBlockTimeLimit", "numberOfTransactions",
+        "diffAdjustingAlgo"})
 public class AdaptiveForgingSettings {
     private boolean enabled;
     private int adaptiveBlockTime;
     private int numberOfTransactions;
+    private int diffAdjustingAlgo;
 
     public AdaptiveForgingSettings() {
-        this(false, 60, 0);
+        this(false, 60, 0, 0);
     }
 
-    public AdaptiveForgingSettings(boolean enabled, int adaptiveBlockTime, int numberOfTransactions) {
+    public AdaptiveForgingSettings(boolean enabled, int adaptiveBlockTime, int numberOfTransactions, int diffAdjustingAlgo) {
         this.enabled = enabled;
         this.adaptiveBlockTime = adaptiveBlockTime;
         this.numberOfTransactions = numberOfTransactions;
+        this.diffAdjustingAlgo = diffAdjustingAlgo;
     }
 
     public int getNumberOfTransactions() {
@@ -38,6 +41,14 @@ public class AdaptiveForgingSettings {
 
     public void setAdaptiveBlockTime(int adaptiveBlockTime) {
         this.adaptiveBlockTime = adaptiveBlockTime;
+    }
+
+    public int getDiffAdjustingAlgo() {
+        return diffAdjustingAlgo;
+    }
+
+    public void setDiffAdjustingAlgo(int diffAdjustingAlgo) {
+        this.diffAdjustingAlgo = diffAdjustingAlgo;
     }
 
     public boolean isEnabled() {

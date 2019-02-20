@@ -7,7 +7,7 @@ package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
-import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacade;
+import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacadeHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +25,7 @@ public class ActiveGenerators {
     private static final Logger LOG = LoggerFactory.getLogger(ActiveGenerators.class);
 
     private Blockchain blockchain;
-    private ConsensusFacade consensusFacade;
+    private ConsensusFacadeHolder consensusFacadeHolder;
     private BlockchainProcessor blockchainProcessor;
     /**
      * Active block generators
@@ -48,9 +48,9 @@ public class ActiveGenerators {
     private boolean generatorsInitialized = false;
 
     @Inject
-    public ActiveGenerators(Blockchain blockchain, ConsensusFacade consensusFacade) {
+    public ActiveGenerators(Blockchain blockchain, ConsensusFacadeHolder consensusFacadeHolder) {
         this.blockchain = blockchain;
-        this.consensusFacade = consensusFacade;
+        this.consensusFacadeHolder = consensusFacadeHolder;
     }
 
     private BlockchainProcessor lookupBlockchainProcessor() {
@@ -88,7 +88,7 @@ public class ActiveGenerators {
             activeBlockId = blockId;
             Block lastBlock = blockchain.getLastBlock();
             for (Generator generator : activeGenerators) {
-                consensusFacade.updateGeneratorData(generator, lastBlock);
+                consensusFacadeHolder.getConsensusFacade().updateGeneratorData(generator, lastBlock);
             }
             Collections.sort(activeGenerators);
         }

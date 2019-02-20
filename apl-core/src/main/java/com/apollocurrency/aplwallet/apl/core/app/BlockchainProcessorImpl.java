@@ -27,8 +27,7 @@ import com.apollocurrency.aplwallet.apl.core.BlockService;
 import com.apollocurrency.aplwallet.apl.core.account.AccountLedger;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfigUpdater;
-import com.apollocurrency.aplwallet.apl.core.consensus.BlockAcceptor;
-import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacade;
+import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacadeHolder;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerator;
 import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
 import com.apollocurrency.aplwallet.apl.core.db.DerivedDbTable;
@@ -114,7 +113,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
     private volatile int lastRestoreTime = 0;
     private BlockValidator validator;
     private BlockService blockService;
-    private ConsensusFacade consensusFacade;
+    private ConsensusFacadeHolder consensusFacadeHolder;
     private BlockGenerator blockGenerator;
     private BlockJsonConverter blockJsonConverter;
     private PrunableTransactionsStore prunableTransactionsStore;
@@ -746,13 +745,15 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
     };
 
     @Inject
-    private BlockchainProcessorImpl(BlockValidator validator, BlockService service, ConsensusFacade consensusFacade,
-                                    BlockJsonConverter jsonConverter, BlockGenerator blockGenerator) {
+    private BlockchainProcessorImpl(BlockValidator validator, BlockService service, ConsensusFacadeHolder consensusFacadeHolder,
+                                    BlockJsonConverter jsonConverter, BlockGenerator blockGenerator, PrunableTransactionsStore prunableTransactionsStore) {
         final int trimFrequency = propertiesHolder.getIntProperty("apl.trimFrequency");
         this.validator = validator;
         this.blockService = service;
-        this.consensusFacade = consensusFacade;
+        this.consensusFacadeHolder = consensusFacadeHolder;
         this.blockJsonConverter = jsonConverter;
+        this.blockGenerator = blockGenerator;
+        this.prunableTransactionsStore = prunableTransactionsStore;
         this.dbTables = DerivedDbTablesRegistry.getInstance();
         blockListeners.addListener(block -> {
             if (block.getHeight() % 5000 == 0) {
@@ -1183,7 +1184,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                 validateTransactions(block, previousLastBlock, curTime, duplicates, previousLastBlock.getHeight() >= Constants.LAST_CHECKSUM_BLOCK);
                 List<Block> prevBlocks = collectPrevBlocks(previousLastBlock);
 
-                consensusFacade.setPreviousBlock(block, prevBlocks);
+                consensusFacadeHolder.getConsensusFacade().setPreviousBlock(block, prevBlocks);
 
                 blockListeners.notify(block, Event.BEFORE_BLOCK_ACCEPT);
                 lookupTransactionProcessor().requeueAllUnconfirmedTransactions();
@@ -1324,7 +1325,8 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
         try {
             blockListeners.notify(block, BlockchainProcessor.Event.BEFORE_BLOCK_APPLY);
 
-            List<Transaction> transactions = consensusFacade.acceptBlock(block, validPhasedTransactions, invalidPhasedTransactions, duplicates);
+            List<Transaction> transactions = consensusFacadeHolder.getConsensusFacade().acceptBlock(block, validPhasedTransactions, invalidPhasedTransactions,
+                    duplicates);
             addPrunableTransactions(transactions);
             blockListeners.notify(block, Event.AFTER_BLOCK_APPLY);
             if (transactions.size() > 0) {

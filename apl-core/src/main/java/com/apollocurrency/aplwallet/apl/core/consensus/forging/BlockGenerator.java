@@ -8,7 +8,7 @@ import com.apollocurrency.aplwallet.apl.core.app.Block;
 
 import java.util.Collection;
 
-public interface BlockGenerator extends Runnable {
+public interface BlockGenerator {
     Generator startGeneration(Generator generator);
 
     Generator stopGeneration(Generator generator);

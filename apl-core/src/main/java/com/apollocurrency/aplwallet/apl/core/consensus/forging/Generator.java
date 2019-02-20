@@ -2,6 +2,7 @@
 package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
 
+import com.apollocurrency.aplwallet.apl.core.app.Convert2;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
 
@@ -18,6 +19,15 @@ public class Generator implements Comparable<Generator> {
 
     public byte[] getKeySeed() {
         return keySeed;
+    }
+
+    @Override
+    public String toString() {
+        return "Generator{" +
+                "accountId=" + Convert2.rsAccount(accountId) +
+                ", effectiveBalance=" + effectiveBalance +
+                ", deadline=" + deadline +
+                '}';
     }
 
     public Generator(byte[] keySeed) {

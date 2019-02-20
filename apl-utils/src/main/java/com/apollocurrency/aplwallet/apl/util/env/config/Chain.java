@@ -9,11 +9,6 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -49,7 +44,7 @@ public class Chain {
                  @JsonProperty("symbol") String symbol,
                  @JsonProperty("prefix") String prefix,
                  @JsonProperty("project") String project,
-                 @JsonProperty("lastKnowBlockHeight") Integer lastKnowBlockHeight,
+                 @JsonProperty("lastKnownBlockHeight") Integer lastKnownBlockHeight,
                  @JsonProperty("genesisLocation") String genesisLocation,
                  @JsonProperty("blockchainProperties") List<BlockchainProperties> blockchainProperties
     ) {
@@ -63,7 +58,7 @@ public class Chain {
         this.symbol = symbol;
         this.prefix = prefix;
         this.project = project;
-        this.lastKnownBlockHeight = lastKnowBlockHeight;
+        this.lastKnownBlockHeight = lastKnownBlockHeight;
         this.genesisLocation = genesisLocation;
         this.blockchainProperties =
                 blockchainProperties

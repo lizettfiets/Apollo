@@ -8,7 +8,11 @@ import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.consensus.BlockAlgoProviderImpl;
 
 import java.util.List;
+import javax.inject.Named;
+import javax.inject.Singleton;
 
+@Singleton
+@Named("oldBlockAlgoProvider")
 public class LegacyBlockAlgoProvider extends BlockAlgoProviderImpl {
     @Override
     public long getBlockTimeAverage(List<Block> blocks) {

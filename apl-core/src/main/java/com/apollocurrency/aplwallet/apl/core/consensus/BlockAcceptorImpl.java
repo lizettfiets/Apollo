@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 @Singleton
@@ -39,6 +40,7 @@ public class BlockAcceptorImpl implements BlockAcceptor {
     private TransactionApplier transactionApplier;
     private Blockchain blockchain;
 
+    @Inject
     public BlockAcceptorImpl(BlockApplier blockApplier,
                              Blockchain blockchain, TransactionApplier transactionApplier) {
         this.blockApplier = blockApplier;

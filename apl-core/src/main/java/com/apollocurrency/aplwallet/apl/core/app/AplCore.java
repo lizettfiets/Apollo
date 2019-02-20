@@ -230,7 +230,7 @@ public final class AplCore {
                 Peers.init();
                 AppStatus.getInstance().update("API Proxy initialization...");
                 APIProxy.init();
-                ThreadPool.scheduleThread("BlockGenerator", CDI.current().select(BlockGenerator.class).get(), 500, TimeUnit.MILLISECONDS);
+                ThreadPool.scheduleThread("BlockGenerator", () -> CDI.current().select(BlockGenerator.class).get().performGenerationIteration(), 500, TimeUnit.MILLISECONDS);
                 AddOns.init();
                 AppStatus.getInstance().update("API initialization...");
                 Helper2FA.init(databaseManager);
