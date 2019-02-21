@@ -1,11 +1,15 @@
 /*
- * Copyright © 2018-2019 Apollo Foundation
+ *  Copyright © 2018-2019 Apollo Foundation
  */
 
-package com.apollocurrency.aplwallet.apl.core.app;
+package com.apollocurrency.aplwallet.apl.core.consensus.validator;
 
 import com.apollocurrency.aplwallet.apl.core.account.Account;
 import com.apollocurrency.aplwallet.apl.core.account.AccountService;
+import com.apollocurrency.aplwallet.apl.core.app.Block;
+import com.apollocurrency.aplwallet.apl.core.app.BlockDao;
+import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
+import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerationAlgoProvider;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
@@ -30,7 +34,7 @@ public class DefaultBlockValidator extends AbstractBlockValidator {
 
     @Override
     public void validatePreviousHash(Block block, Block previousBlock) throws BlockchainProcessor.BlockNotAcceptedException {
-        if (!Arrays.equals(Crypto.sha256().digest(((BlockImpl) previousBlock).bytes()),
+        if (!Arrays.equals(Crypto.sha256().digest((previousBlock).getBytes()),
                 block.getPreviousBlockHash())) {
             throw new BlockchainProcessor.BlockNotAcceptedException("Previous block hash doesn't match", block);
         }

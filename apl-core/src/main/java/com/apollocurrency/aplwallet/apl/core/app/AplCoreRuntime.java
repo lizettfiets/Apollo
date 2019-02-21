@@ -6,13 +6,6 @@
 package com.apollocurrency.aplwallet.apl.core.app;
 
 import com.apollocurrency.aplwallet.apl.core.app.mint.MintWorker;
-import javax.enterprise.inject.spi.CDI;
-import java.io.File;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.util.env.RuntimeEnvironment;
 import com.apollocurrency.aplwallet.apl.util.env.RuntimeMode;
@@ -22,6 +15,13 @@ import com.apollocurrency.aplwallet.apl.util.env.dirprovider.DirProvider;
 import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import javax.enterprise.inject.spi.CDI;
 
 
 /**
@@ -40,7 +40,7 @@ public class AplCoreRuntime {
     // in every class?
     private BlockchainConfig blockchainConfig = CDI.current().select(BlockchainConfig.class).get();
     private PropertiesHolder propertiesHolder = CDI.current().select(PropertiesHolder.class).get();
-    
+
      //TODO:  check and debug minting    
     private MintWorker mintworker;
     private Thread mintworkerThread;

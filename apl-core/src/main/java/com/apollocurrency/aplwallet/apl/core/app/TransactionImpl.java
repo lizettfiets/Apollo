@@ -23,6 +23,7 @@ package com.apollocurrency.aplwallet.apl.core.app;
 import com.apollocurrency.aplwallet.apl.core.account.Account;
 import com.apollocurrency.aplwallet.apl.core.account.AccountRestrictions;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.core.db.DbKey;
 import com.apollocurrency.aplwallet.apl.core.transaction.Messaging;
 import com.apollocurrency.aplwallet.apl.core.transaction.TransactionType;
@@ -69,6 +70,7 @@ public class TransactionImpl implements Transaction {
     private static TransactionProcessor transactionProcessor = CDI.current().select(TransactionProcessorImpl.class).get();
     private static volatile EpochTime timeService = CDI.current().select(EpochTime.class).get();
     private static PropertiesHolder propertiesHolder = CDI.current().select(PropertiesHolder.class).get();
+    private static GenesisDataHolder genesisDataHolder = CDI.current().select(GenesisDataHolder.class).get();
     
     @Inject
     private static BlockchainImpl blockchain;
@@ -668,7 +670,7 @@ public class TransactionImpl implements Transaction {
                 buffer.putInt(timestamp);
                 buffer.putShort(deadline);
                 buffer.put(getSenderPublicKey());
-                buffer.putLong(type.canHaveRecipient() ? recipientId : Genesis.CREATOR_ID);
+                buffer.putLong(type.canHaveRecipient() ? recipientId : genesisDataHolder.getGeneratorId());
                 buffer.putLong(amountATM);
                 buffer.putLong(feeATM);
                 if (referencedTransactionFullHash != null) {

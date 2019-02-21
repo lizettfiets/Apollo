@@ -20,15 +20,16 @@
 
 package com.apollocurrency.aplwallet.apl.core.app;
 
-import javax.enterprise.inject.spi.CDI;
-
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
 
+import javax.enterprise.inject.spi.CDI;
+
 
 public final class Convert2 {
-
+    private static GenesisDataHolder genesisDataHolder = CDI.current().select(GenesisDataHolder.class).get();
     private Convert2() {} //never
 
     //TODO: rewrite other classes without defaultRsAccount
@@ -42,11 +43,11 @@ public final class Convert2 {
 
 
     public static long fromEpochTime(int epochTime) {
-        return epochTime * 1000L + Genesis.EPOCH_BEGINNING - 500L;
+        return epochTime * 1000L + genesisDataHolder.getEpochBeginning() - 500L;
     }
 
     public static int toEpochTime(long currentTime) {
-        return (int)((currentTime - Genesis.EPOCH_BEGINNING + 500) / 1000);
+        return (int)((currentTime - genesisDataHolder.getEpochBeginning() + 500) / 1000);
     }
 
 

@@ -24,6 +24,8 @@ public interface ConsensusFacade {
 
     Block generateBlock(Generator generator, Block lastBlock, int currentTimeWithForgingDelay);
 
+    Block generateGenesisBlock();
+
     List<Transaction> acceptBlock(Block block, List<Transaction> validPhasedTransactions, List<Transaction> invalidPhasedTransactions,
                                   Map<TransactionType, Map<String, Integer>> duplicates) throws BlockchainProcessor.TransactionNotAcceptedException;
 

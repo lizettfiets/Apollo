@@ -74,12 +74,10 @@ public class ActiveGenerators {
             LOG.debug(activeGeneratorIds.size() + " block generators found");
             lookupBlockchainProcessor().addListener(block -> {
                 long generatorId = block.getGeneratorId();
-                synchronized (activeGenerators) {
                     if (!activeGeneratorIds.contains(generatorId)) {
                         activeGeneratorIds.add(generatorId);
                         activeGenerators.add(new Generator(null, null, generatorId));
                     }
-                }
             }, BlockchainProcessor.Event.BLOCK_PUSHED);
             generatorsInitialized = true;
         }

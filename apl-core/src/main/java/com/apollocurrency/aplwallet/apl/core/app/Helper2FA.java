@@ -6,32 +6,19 @@ package com.apollocurrency.aplwallet.apl.core.app;
 import com.apollocurrency.aplwallet.api.dto.Status2FA;
 import com.apollocurrency.aplwallet.apl.core.account.AccountGenerator;
 import com.apollocurrency.aplwallet.apl.core.account.GeneratedAccount;
-import com.apollocurrency.aplwallet.apl.core.app.AplCoreRuntime;
-import com.apollocurrency.aplwallet.apl.core.app.Convert2;
-import com.apollocurrency.aplwallet.apl.core.app.DatabaseManager;
-import com.apollocurrency.aplwallet.apl.core.app.LegacyAccountGenerator;
-import com.apollocurrency.aplwallet.apl.core.app.PassphraseGeneratorImpl;
-import com.apollocurrency.aplwallet.apl.core.app.SecretBytesDetails;
-import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthDetails;
-import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthService;
-import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthServiceImpl;
-import com.apollocurrency.aplwallet.apl.core.app.VaultKeyStore;
-import com.apollocurrency.aplwallet.apl.core.db.TwoFactorAuthFileSystemRepository;
-import com.apollocurrency.aplwallet.apl.core.db.TwoFactorAuthRepositoryImpl;
 import com.apollocurrency.aplwallet.apl.core.http.JSONResponses;
 import com.apollocurrency.aplwallet.apl.core.http.ParameterException;
 import com.apollocurrency.aplwallet.apl.core.http.ParameterParser;
 import com.apollocurrency.aplwallet.apl.core.http.TwoFactorAuthParameters;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
-import com.apollocurrency.aplwallet.apl.util.env.RuntimeEnvironment;
-import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
-import javax.enterprise.inject.spi.CDI;
-import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.enterprise.inject.spi.CDI;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * This class is just static helper for 2FA. It should be removed later
@@ -39,22 +26,12 @@ import org.slf4j.LoggerFactory;
  * @author al
  */
 public class Helper2FA {
-   private static TwoFactorAuthService service2FA;
+   private static TwoFactorAuthService service2FA = CDI.current().select(TwoFactorAuthService.class).get();
    private static final Logger LOG = LoggerFactory.getLogger(Helper2FA.class);
-   private static final PropertiesHolder propertiesHolder = CDI.current().select(PropertiesHolder.class).get();
    private static final VaultKeyStore KEYSTORE = CDI.current().select(VaultKeyStore.class).get();
    private static final PassphraseGeneratorImpl passphraseGenerator = new PassphraseGeneratorImpl(10, 15);
    private static final AccountGenerator accountGenerator = new LegacyAccountGenerator(passphraseGenerator); 
-    
-     public static void init(DatabaseManager databaseManagerParam) {
-        DatabaseManager databaseManager = databaseManagerParam;
-        service2FA = new TwoFactorAuthServiceImpl(
-                propertiesHolder.getBooleanProperty("apl.store2FAInFileSystem")
-                        ? new TwoFactorAuthFileSystemRepository(AplCoreRuntime.getInstance().get2FADir())
-                        : new TwoFactorAuthRepositoryImpl(databaseManager.getDataSource()),
-                propertiesHolder.getStringProperty("apl.issuerSuffix2FA", RuntimeEnvironment.getInstance().isDesktopApplicationEnabled() ? "desktop" : "web"));
-    }
-     
+
     public static TwoFactorAuthDetails enable2FA(long accountId, String passphrase) throws ParameterException {
             findSecretBytes(accountId, passphrase, true);
             return service2FA.enable(accountId);

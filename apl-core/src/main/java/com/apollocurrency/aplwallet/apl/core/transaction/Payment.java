@@ -4,22 +4,23 @@
 package com.apollocurrency.aplwallet.apl.core.transaction;
 
 import com.apollocurrency.aplwallet.apl.core.account.Account;
-import com.apollocurrency.aplwallet.apl.core.account.AccountLedger;
 import com.apollocurrency.aplwallet.apl.core.account.LedgerEvent;
-import com.apollocurrency.aplwallet.apl.core.app.Genesis;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.Attachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.EmptyAttachment;
 import com.apollocurrency.aplwallet.apl.util.AplException;
-import java.nio.ByteBuffer;
 import org.json.simple.JSONObject;
+
+import java.nio.ByteBuffer;
+import javax.enterprise.inject.spi.CDI;
 
 /**
  *
  * @author al
  */
 public abstract class Payment extends TransactionType {
-    
+    private static GenesisDataHolder genesisDataHolder = CDI.current().select(GenesisDataHolder.class).get();
     private Payment() {
     }
 
@@ -36,7 +37,8 @@ public abstract class Payment extends TransactionType {
     @Override
     public final void applyAttachment(Transaction transaction, Account senderAccount, Account recipientAccount) {
         if (recipientAccount == null) {
-            Account.getAccount(Genesis.CREATOR_ID).addToBalanceAndUnconfirmedBalanceATM(getLedgerEvent(), transaction.getId(), transaction.getAmountATM());
+            Account.getAccount(genesisDataHolder.getGeneratorId()).addToBalanceAndUnconfirmedBalanceATM(getLedgerEvent(), transaction.getId(),
+                    transaction.getAmountATM());
         }
     }
 

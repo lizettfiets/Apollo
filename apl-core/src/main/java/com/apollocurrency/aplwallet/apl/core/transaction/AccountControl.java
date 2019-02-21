@@ -4,22 +4,21 @@
 package com.apollocurrency.aplwallet.apl.core.transaction;
 
 import com.apollocurrency.aplwallet.apl.core.account.Account;
-import com.apollocurrency.aplwallet.apl.core.account.AccountLedger;
-import com.apollocurrency.aplwallet.apl.core.account.AccountRestrictions;
 import com.apollocurrency.aplwallet.apl.core.account.LedgerEvent;
 import com.apollocurrency.aplwallet.apl.core.account.PhasingOnly;
-import com.apollocurrency.aplwallet.apl.core.app.Genesis;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
 import com.apollocurrency.aplwallet.apl.core.app.VoteWeighting;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.AbstractAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.AccountControlEffectiveBalanceLeasing;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.Attachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.SetPhasingOnly;
 import com.apollocurrency.aplwallet.apl.util.AplException;
 import com.apollocurrency.aplwallet.apl.util.Constants;
+import org.json.simple.JSONObject;
+
 import java.nio.ByteBuffer;
 import java.util.Map;
-import org.json.simple.JSONObject;
+import javax.enterprise.inject.spi.CDI;
 
 /**
  *
@@ -30,6 +29,7 @@ public abstract class AccountControl extends TransactionType {
     private AccountControl() {
     }
 
+    private static GenesisDataHolder genesisDataHolder = CDI.current().select(GenesisDataHolder.class).get();
     @Override
     public final byte getType() {
         return TransactionType.TYPE_ACCOUNT_CONTROL;
@@ -91,7 +91,7 @@ public abstract class AccountControl extends TransactionType {
             if (recipientPublicKey == null) {
                 throw new AplException.NotCurrentlyValidException("Invalid effective balance leasing: " + " recipient account " + Long.toUnsignedString(transaction.getRecipientId()) + " not found or no public key published");
             }
-            if (transaction.getRecipientId() == Genesis.CREATOR_ID) {
+            if (transaction.getRecipientId() == genesisDataHolder.getGeneratorId()) {
                 throw new AplException.NotValidException("Leasing to Genesis account not allowed");
             }
         }

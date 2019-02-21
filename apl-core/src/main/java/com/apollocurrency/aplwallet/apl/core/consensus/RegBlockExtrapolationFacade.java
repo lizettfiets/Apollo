@@ -8,22 +8,27 @@ import com.apollocurrency.aplwallet.apl.core.account.AccountService;
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.BlockImpl;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.apollocurrency.aplwallet.apl.core.consensus.acceptor.BlockAcceptor;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerationAlgoProvider;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.Generator;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.core.transaction.UnconfirmedTransactionService;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class RegBlockExtrapolationFacade extends DefaultConsensusFacade {
 
     static final BigDecimal FLOAT_MULTIPLIER = BigDecimal.valueOf(1000L);
     static final BigInteger FLOAT_DIVIDER = BigInteger.valueOf(1000L);
+    static final byte[] EMPTY_32_BYTES = new byte[32];
+    static final byte[] EMPTY_64_BYTES = new byte[64];
 
-    public RegBlockExtrapolationFacade(BlockchainConfig blockchainConfig, BlockAlgoProvider blockAlgoProvider, BlockGenerationAlgoProvider generationAlgoProvider, AccountService accountService, UnconfirmedTransactionService unconfirmedTransactionService, BlockAcceptor blockAcceptor) {
-        super(blockchainConfig, blockAlgoProvider, generationAlgoProvider, accountService, unconfirmedTransactionService, blockAcceptor);
+    public RegBlockExtrapolationFacade(BlockchainConfig blockchainConfig, BlockAlgoProvider blockAlgoProvider, BlockGenerationAlgoProvider generationAlgoProvider, AccountService accountService, UnconfirmedTransactionService unconfirmedTransactionService, BlockAcceptor genesisBlockAcceptor, GenesisDataHolder genesisDataHolder) {
+        super(blockchainConfig, blockAlgoProvider, generationAlgoProvider, accountService, unconfirmedTransactionService, genesisBlockAcceptor, genesisDataHolder);
     }
 
     @Override
@@ -36,7 +41,8 @@ public class RegBlockExtrapolationFacade extends DefaultConsensusFacade {
         List<Block> fakeBlocks = new ArrayList<>(prevBlocks);
 
         long timeout = block.getTimeout();
-        Generator forger = new Generator(new byte[32]);
+
+        Generator forger = new Generator(EMPTY_32_BYTES);
 
 
         Block prevFakeBlock = block;
@@ -50,7 +56,7 @@ public class RegBlockExtrapolationFacade extends DefaultConsensusFacade {
             // using constructor instead of generateBlock method to improve performance
             // maybe better just to calculate only base target and dont create block itself
             newFakeBlock = new BlockImpl(Block.REGULAR_BLOCK_VERSION, (int) forger.getHitTime() + 1, prevFakeBlock.getId(),
-                    0L, 0L, 0, new byte[32], block.getGeneratorPublicKey(), new byte[32], new byte[32], 0, null, forger.getKeySeed());
+                    0L, 0L, 0, EMPTY_32_BYTES, block.getGeneratorPublicKey(), EMPTY_32_BYTES, EMPTY_64_BYTES, EMPTY_32_BYTES, 0, Collections.emptyList());
             long id = getBlockAlgoProvider().calculateId(block);
             newFakeBlock.setId(id);
             super.setPreviousBlock(newFakeBlock, fakeBlocks.subList(Math.max(0, fakeBlocks.size() - 3), fakeBlocks.size()));

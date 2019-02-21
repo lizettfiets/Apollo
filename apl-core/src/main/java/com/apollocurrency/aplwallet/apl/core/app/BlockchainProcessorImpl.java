@@ -29,6 +29,7 @@ import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfigUpdater;
 import com.apollocurrency.aplwallet.apl.core.consensus.ConsensusFacadeHolder;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerator;
+import com.apollocurrency.aplwallet.apl.core.consensus.validator.BlockValidator;
 import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
 import com.apollocurrency.aplwallet.apl.core.db.DerivedDbTable;
 import com.apollocurrency.aplwallet.apl.core.db.DerivedDbTablesRegistry;
@@ -746,7 +747,8 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
 
     @Inject
     private BlockchainProcessorImpl(BlockValidator validator, BlockService service, ConsensusFacadeHolder consensusFacadeHolder,
-                                    BlockJsonConverter jsonConverter, BlockGenerator blockGenerator, PrunableTransactionsStore prunableTransactionsStore) {
+                                    BlockJsonConverter jsonConverter, BlockGenerator blockGenerator,
+                                    PrunableTransactionsStore prunableTransactionsStore) {
         final int trimFrequency = propertiesHolder.getIntProperty("apl.trimFrequency");
         this.validator = validator;
         this.blockService = service;
@@ -1113,16 +1115,17 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
         TransactionalDataSource dataSource = lookupDataSource();
         dataSource.begin();
         try (Connection con = dataSource.getConnection()) {
-            Block genesisBlock = Genesis.newGenesisBlock();
+            Block genesisBlock = consensusFacadeHolder.getConsensusFacade().generateGenesisBlock();
             addBlock(genesisBlock);
             genesisBlockId = genesisBlock.getId();
-            Genesis.apply();
+            blockchainConfigUpdater.reset();
+            consensusFacadeHolder.getConsensusFacade().acceptBlock(genesisBlock, Collections.emptyList(), Collections.emptyList(), Collections.emptyMap());
             for (DerivedDbTable table : dbTables.getDerivedTables()) {
                 table.createSearchIndex(con);
             }
             blockchain.commit(genesisBlock);
             dataSource.commit(false);
-        } catch (SQLException e) {
+        } catch (SQLException | TransactionNotAcceptedException e) {
             dataSource.rollback();
             log.info(e.getMessage());
             throw new RuntimeException(e.toString(), e);
@@ -1586,7 +1589,9 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                 long currentBlockId = currentBlock.getId();
                 if (height == 0) {
                     blockchain.setLastBlock(currentBlock); // special case to avoid no last block
-                    Genesis.apply();
+                    blockchainConfigUpdater.reset();
+                    consensusFacadeHolder.getConsensusFacade().acceptBlock(blockchain.getBlock(genesisBlockId), Collections.emptyList(),
+                            Collections.emptyList(), Collections.emptyMap());
                 } else {
                     blockchain.setLastBlock(blockchain.getBlockAtHeight(height - 1));
                 }
@@ -1681,7 +1686,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                     log.info("SUCCESSFULLY PERFORMED FULL RESCAN WITH VALIDATION");
                 }
                 lastRestoreTime = 0;
-            } catch (SQLException e) {
+            } catch (SQLException | TransactionNotAcceptedException e) {
                 dataSource.rollback(false);
                 throw new RuntimeException(e.toString(), e);
             } finally {

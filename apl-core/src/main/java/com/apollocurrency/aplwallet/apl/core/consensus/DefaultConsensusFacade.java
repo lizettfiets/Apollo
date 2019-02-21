@@ -14,8 +14,10 @@ import com.apollocurrency.aplwallet.apl.core.app.TransactionImpl;
 import com.apollocurrency.aplwallet.apl.core.app.UnconfirmedTransaction;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.chainid.HeightConfig;
+import com.apollocurrency.aplwallet.apl.core.consensus.acceptor.BlockAcceptor;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerationAlgoProvider;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.Generator;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.core.transaction.TransactionType;
 import com.apollocurrency.aplwallet.apl.core.transaction.UnconfirmedTransactionService;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
@@ -41,14 +43,22 @@ public class DefaultConsensusFacade implements ConsensusFacade {
     private AccountService accountService;
     private UnconfirmedTransactionService unconfirmedTransactionService;
     private BlockAcceptor blockAcceptor;
+    private GenesisDataHolder genesisDataHolder;
 
-    public DefaultConsensusFacade(BlockchainConfig blockchainConfig, BlockAlgoProvider blockAlgoProvider, BlockGenerationAlgoProvider generationAlgoProvider, AccountService accountService, UnconfirmedTransactionService unconfirmedTransactionService, BlockAcceptor blockAcceptor) {
+    public DefaultConsensusFacade(BlockchainConfig blockchainConfig,
+                                  BlockAlgoProvider blockAlgoProvider,
+                                  BlockGenerationAlgoProvider generationAlgoProvider,
+                                  AccountService accountService,
+                                  UnconfirmedTransactionService unconfirmedTransactionService,
+                                  BlockAcceptor genesisBlockAcceptor,
+                                  GenesisDataHolder genesisDataHolder) {
         this.blockchainConfig = blockchainConfig;
         this.blockAlgoProvider = blockAlgoProvider;
         this.generationAlgoProvider = generationAlgoProvider;
         this.accountService = accountService;
         this.unconfirmedTransactionService = unconfirmedTransactionService;
-        this.blockAcceptor = blockAcceptor;
+        this.blockAcceptor = genesisBlockAcceptor;
+        this.genesisDataHolder = genesisDataHolder;
     }
 
     @Override
@@ -130,14 +140,20 @@ public class DefaultConsensusFacade implements ConsensusFacade {
                             "timestamp " + lastBlock.getTimestamp());
                 } else {
                     res = createBlock(forger.getKeySeed(), lastBlock, potentialBlockTimestamp + timeout, timeout, version);
-                    long id = blockAlgoProvider.calculateId(res);
-                    res.setId(id);
                 }
             }
         }
         return res;
     }
 
+    @Override
+    public Block generateGenesisBlock() {
+        BlockImpl genesisBlock = new BlockImpl(genesisDataHolder.getGenesisPublicKey(), genesisDataHolder.getAccountBytes(),
+                blockchainConfig.getCurrentConfig().getInitialBaseTarget());
+        long id = blockAlgoProvider.calculateId(genesisBlock);
+        genesisBlock.setId(id);
+        return genesisBlock;
+    }
 
     private Block createBlock(byte[] keySeed, Block previousBlock, int blockTimestamp, int timeout, int version) {
         SortedSet<UnconfirmedTransaction> sortedTransactions = unconfirmedTransactionService.getUnconfirmedTransactions(previousBlock,
@@ -160,8 +176,12 @@ public class DefaultConsensusFacade implements ConsensusFacade {
         byte[] generationSignature = generationAlgoProvider.calculateGenerationSignature(publicKey, previousBlock);
         byte[] previousBlockHash = Crypto.sha256().digest(((BlockImpl) previousBlock).getBytes());
 
-        Block block = new BlockImpl(version, blockTimestamp, previousBlock.getId(), totalAmountATM, totalFeeATM, payloadLength,
-                payloadHash, publicKey, generationSignature, previousBlockHash, timeout, blockTransactions, keySeed);
+        BlockImpl block = new BlockImpl(version, blockTimestamp, previousBlock.getId(), totalAmountATM, totalFeeATM, payloadLength,
+                payloadHash, publicKey, generationSignature,null, previousBlockHash, timeout, blockTransactions);
+        byte[] blockSignature = Crypto.sign(block.getBytes(), keySeed);
+        block.setBlockSignature(blockSignature);
+        long id = blockAlgoProvider.calculateId(block);
+        block.setId(id);
         return block;
     }
 

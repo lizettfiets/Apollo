@@ -4,7 +4,6 @@
 
 package com.apollocurrency.aplwallet.apl.core.account;
 
-import com.apollocurrency.aplwallet.apl.core.account.BasicAccount;
 import com.apollocurrency.aplwallet.apl.core.app.Convert2;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.fasterxml.jackson.annotation.JsonIgnore;

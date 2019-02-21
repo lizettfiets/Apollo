@@ -1,8 +1,8 @@
 /*
- * Copyright © 2018 Apollo Foundation
+ *  Copyright © 2018-2019 Apollo Foundation
  */
 
-package com.apollocurrency.aplwallet.apl.core;
+package com.apollocurrency.aplwallet.apl.core.consensus.acceptor;
 
 import com.apollocurrency.aplwallet.apl.core.account.Account;
 import com.apollocurrency.aplwallet.apl.core.account.AccountService;
@@ -15,17 +15,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 
 @Singleton
-public class BlockApplierImpl implements BlockApplier {
-    private static final Logger LOG = LoggerFactory.getLogger(BlockApplierImpl.class);
+@Named("defaultBlockApplier")
+public class DefaultBlockApplierImpl implements BlockApplier {
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultBlockApplierImpl.class);
 
     private BlockDao blockDao;
     private AccountService accountService;
 
     @Inject
-    public BlockApplierImpl(BlockDao blockDao, AccountService accountService) {
+    public DefaultBlockApplierImpl(BlockDao blockDao, AccountService accountService) {
         this.blockDao = blockDao;
         this.accountService = accountService;
     }

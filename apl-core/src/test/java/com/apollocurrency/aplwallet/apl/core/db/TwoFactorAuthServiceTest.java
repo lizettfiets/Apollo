@@ -23,28 +23,41 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.security.GeneralSecurityException;
-import java.util.Random;
-
 import com.apollocurrency.aplwallet.api.dto.Status2FA;
 import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthDetails;
 import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthService;
 import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthServiceImpl;
+import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.testutil.TwoFactorAuthUtil;
 import com.j256.twofactorauth.TimeBasedOneTimePasswordUtil;
+import org.jboss.weld.junit.MockBean;
+import org.jboss.weld.junit5.EnableWeld;
+import org.jboss.weld.junit5.WeldInitiator;
+import org.jboss.weld.junit5.WeldSetup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.security.GeneralSecurityException;
+import java.util.Random;
+
 @ExtendWith(MockitoExtension.class)
+@EnableWeld
 public class TwoFactorAuthServiceTest {
     @Mock
     private TwoFactorAuthRepository repository;
     private TwoFactorAuthService service;
-
+    @Mock
+    BlockchainConfig blockchainConfig;
+@WeldSetup
+public WeldInitiator weld = WeldInitiator.from().addBeans(MockBean.of(Mockito.mock(GenesisDataHolder.class), GenesisDataHolder.class))
+        .addBeans(MockBean.of(blockchainConfig, BlockchainConfig.class))
+        .build();
     @BeforeEach
     public void setUp() throws Exception {
         service = new TwoFactorAuthServiceImpl(repository, "test");
@@ -52,6 +65,7 @@ public class TwoFactorAuthServiceTest {
 
     @Test
     public void testEnable() {
+        Mockito.doReturn("APL").when(blockchainConfig).getAccountPrefix();
         doReturn(true).when(repository).add(any(TwoFactorAuthEntity.class));
         TwoFactorAuthDetails twoFactorAuthDetails = service.enable(ENTITY3.getAccount());
         TwoFactorAuthUtil.verifySecretCode(twoFactorAuthDetails, Convert.defaultRsAccount(ENTITY3.getAccount()));
@@ -69,6 +83,7 @@ public class TwoFactorAuthServiceTest {
     }
     @Test
     public void testEnableNotConfirmed() {
+        Mockito.doReturn("APL").when(blockchainConfig).getAccountPrefix();
         doReturn(ENTITY2).when(repository).get(ACCOUNT2.getId());
 
         TwoFactorAuthDetails details = service.enable(ACCOUNT2.getId());

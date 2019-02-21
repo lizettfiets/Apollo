@@ -20,12 +20,7 @@
 
 package com.apollocurrency.aplwallet.apl.core.app;
 
-import static org.slf4j.LoggerFactory.getLogger;
-
 import com.apollocurrency.aplwallet.apl.core.account.Account;
-import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
-import com.apollocurrency.aplwallet.apl.crypto.Crypto;
-import org.slf4j.Logger;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -33,14 +28,8 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import javax.enterprise.inject.spi.CDI;
 
 public final class BlockImpl implements Block {
-    private static final Logger LOG = getLogger(BlockImpl.class);
-
-
-    private static BlockchainConfig blockchainConfig = CDI.current().select(BlockchainConfig.class).get();
-    private static BlockDao blockDao = CDI.current().select(BlockDaoImpl.class).get();
 
     private final int version;
     private final int timestamp;
@@ -57,28 +46,22 @@ public final class BlockImpl implements Block {
 
     private byte[] blockSignature;
     private BigInteger cumulativeDifficulty = BigInteger.ZERO;
-    private long baseTarget = blockchainConfig.getCurrentConfig().getInitialBaseTarget();
+    private long baseTarget; //blockchainConfig.getCurrentConfig().getInitialBaseTarget();
     private volatile long nextBlockId;
     private int height = -1;
     private volatile long id;
     private volatile String stringId = null;
     private volatile long generatorId;
     private volatile byte[] bytes = null;
+    // check signature only ones and then assume that signature valid
+    private volatile boolean hasValidSignature = false;
 
-    public BlockImpl(byte[] generatorPublicKey, byte[] generationSignature) {
+    // for genesis block
+    public BlockImpl(byte[] generatorPublicKey, byte[] generationSignature, long baseTarget) {
         this(-1, 0, 0, 0, 0, 0, new byte[32], generatorPublicKey, generationSignature, new byte[64],
                 new byte[32],  0, Collections.emptyList());
         this.height = 0;
-    }
-
-    public BlockImpl(int version, int timestamp, long previousBlockId, long totalAmountATM, long totalFeeATM, int payloadLength, byte[] payloadHash,
-              byte[] generatorPublicKey, byte[] generationSignature, byte[] previousBlockHash, int timeout,
-              List<Transaction> transactions,
-              byte[] keySeed) {
-        this(version, timestamp, previousBlockId, totalAmountATM, totalFeeATM, payloadLength, payloadHash,
-                generatorPublicKey, generationSignature, null, previousBlockHash, timeout, transactions);
-        blockSignature = Crypto.sign(bytes(), keySeed);
-        bytes = null;
+        this.baseTarget = baseTarget;
     }
 
     public BlockImpl(int version, int timestamp, long previousBlockId, long totalAmountATM, long totalFeeATM, int payloadLength, byte[] payloadHash,
@@ -245,11 +228,11 @@ public final class BlockImpl implements Block {
 
     @Override
     public String getStringId() {
+        if (id == 0) {
+            throw new RuntimeException("Block id not set yet!");
+        }
         if (stringId == null) {
-            getId();
-            if (stringId == null) {
-                stringId = Long.toUnsignedString(id);
-            }
+            stringId = Long.toUnsignedString(id);
         }
         return stringId;
     }
@@ -319,7 +302,9 @@ public final class BlockImpl implements Block {
         return bytes;
     }
 
-    private volatile boolean hasValidSignature = false;
+    public void setBlockSignature(byte[] blockSignature) {
+        this.blockSignature = blockSignature;
+    }
 
     void loadTransactions() {
         for (Transaction transaction : getTransactions()) {

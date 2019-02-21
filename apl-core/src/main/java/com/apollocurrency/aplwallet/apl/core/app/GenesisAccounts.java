@@ -3,8 +3,17 @@
  */
 package com.apollocurrency.aplwallet.apl.core.app;
 
+import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import javax.enterprise.inject.spi.CDI;
 import javax.inject.Singleton;
 
 /**
@@ -16,7 +25,25 @@ public class GenesisAccounts {
     private static List<Map.Entry<String, Long>> initialGenesisAccountsBalances;
 
     public static void init () {
-         initialGenesisAccountsBalances =  Genesis.loadGenesisAccounts();
+        initialGenesisAccountsBalances = loadGenesisAccounts();
+    }
+    public static List<Map.Entry<String, Long>> loadGenesisAccounts() {
+        String path = "conf/"+ CDI.current().select(BlockchainConfig.class).get().getChain().getGenesisLocation();
+        try (InputStreamReader is = new InputStreamReader(
+                GenesisAccounts.class.getClassLoader().getResourceAsStream(path))) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode root = objectMapper.readTree(is);
+            JsonNode balancesArray = root.get("balances");
+            Map<String, Long> map = objectMapper.readValue(balancesArray.toString(), new TypeReference<Map<String, Long>>(){});
+
+            return map.entrySet()
+                    .stream()
+                    .sorted((o1, o2) -> Long.compare(o2.getValue(), o1.getValue()))
+                    .skip(1) //skip first account to collect only genesis accounts
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load genesis accounts", e);
+        }
     }
  
     public static List<Map.Entry<String, Long>> getGenesisBalances(int firstIndex, int lastIndex) {

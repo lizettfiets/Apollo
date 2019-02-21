@@ -6,18 +6,24 @@ package com.apollocurrency.aplwallet.apl.core.app;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.security.GeneralSecurityException;
-import java.util.Random;
-
 import com.apollocurrency.aplwallet.api.dto.Status2FA;
+import com.apollocurrency.aplwallet.apl.core.config.Property;
 import com.apollocurrency.aplwallet.apl.core.db.TwoFactorAuthEntity;
 import com.apollocurrency.aplwallet.apl.core.db.TwoFactorAuthRepository;
+import com.apollocurrency.aplwallet.apl.util.StringUtils;
+import com.apollocurrency.aplwallet.apl.util.env.RuntimeEnvironment;
 import com.j256.twofactorauth.TimeBasedOneTimePasswordUtil;
 import org.apache.commons.codec.binary.Base32;
 import org.slf4j.Logger;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.security.GeneralSecurityException;
+import java.util.Random;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
 public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
     private static final Logger LOG = getLogger(TwoFactorAuthServiceImpl.class);
     private static final Base32 BASE_32 = new Base32();
@@ -30,8 +36,15 @@ public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
     private final Random random;
     private final String issuerSuffix;
 
-    public TwoFactorAuthServiceImpl(TwoFactorAuthRepository repository, String issuerSuffix) {
-        this(repository, issuerSuffix, new Random());
+    @Inject
+    public TwoFactorAuthServiceImpl(TwoFactorAuthRepository repository,
+                                    @Property(name = "apl.issuerSuffix2FA") String issuerSuffix) {
+        this(repository,
+                StringUtils.isBlank(issuerSuffix)
+                        ? RuntimeEnvironment.getInstance().isDesktopApplicationEnabled()
+                        ? "desktop" : "web" :
+                        issuerSuffix,
+                new Random());
     }
 
     public TwoFactorAuthServiceImpl(TwoFactorAuthRepository repository, String issuerSuffix, Random random) {
@@ -52,7 +65,7 @@ public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
             if (!entity.isConfirmed()) {
 
             String existingBase32Secret = BASE_32.encodeToString(entity.getSecret());
-            return new TwoFactorAuthDetails(getQrCodeUrl(Convert2.defaultRsAccount(entity.getAccount()), existingBase32Secret),
+            return new TwoFactorAuthDetails(getQrCodeUrl(Convert2.rsAccount(entity.getAccount()), existingBase32Secret),
                     existingBase32Secret, Status2FA.OK);
             }
             return new TwoFactorAuthDetails(null, null, Status2FA.ALREADY_ENABLED);
@@ -66,7 +79,7 @@ public class TwoFactorAuthServiceImpl implements TwoFactorAuthService {
             return new TwoFactorAuthDetails(null, null, Status2FA.INTERNAL_ERROR);
         }
 
-        String qrCodeUrl = getQrCodeUrl(Convert2.defaultRsAccount(accountId), base32Secret);
+        String qrCodeUrl = getQrCodeUrl(Convert2.rsAccount(accountId), base32Secret);
         return new TwoFactorAuthDetails(qrCodeUrl, base32Secret, Status2FA.OK);
     }
 

@@ -73,22 +73,26 @@ public class BlockGeneratorImpl implements BlockGenerator {
         }
         try {
             try {
+                // acquire lock to make sure that blockchain will not be changed
                 blockchain.updateLock();
                 try {
                     Block lastBlock = blockchain.getLastBlock();
+                    // do not generate blocks when no blocks in db (no genesis) and when blockchain was not sync
                     if (lastBlock == null || lastBlock.getHeight() < blockchainConfig.getLastKnownBlockHeight()) {
                         return;
                     }
 //                    Note, that generation delay can be negative, so generation will be more faster
                     final int generationLimit = time.getTime() - generationDelay;
+                    // check blockchain and generators changes since last iteration
                     if (lastBlock.getId() != lastBlockId || sortedGenerators == null) {
                         lastBlockId = lastBlock.getId();
+                        // try to create better  block
                         if (lastBlock.getTimestamp() > time.getTime() - 600) {
                             Block previousBlock = blockchain.getBlock(lastBlock.getPreviousBlockId());
                             for (Generator generator : generators.values()) {
                                 ConsensusFacade consensusFacade = consensusFacadeHolder.getConsensusFacade();
                                 consensusFacade.updateGeneratorData(generator, previousBlock);
-
+                                // check whether we create better block or not
                                 if (generator.getHitTime() > 0 && consensusFacade.compareGeneratorAndBlockTime(generator, lastBlock,
                                         generationLimit) < 0) {
                                     LOG.debug("Pop off: " + generator.toString() + " will pop off last block " + lastBlock.getStringId());
@@ -107,6 +111,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                             }
                         }
                         Collections.sort(activeGenerators);
+                        // caching generators for better performance
                         sortedGenerators = Collections.unmodifiableList(activeGenerators);
                     }
                     for (Generator generator : sortedGenerators) {

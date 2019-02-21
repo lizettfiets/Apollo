@@ -3,7 +3,7 @@
  */
 package com.apollocurrency.aplwallet.apl.core.account;
 
-import com.apollocurrency.aplwallet.apl.core.app.Genesis;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
 import com.apollocurrency.aplwallet.apl.core.db.DbKey;
 import com.apollocurrency.aplwallet.apl.core.db.DbUtils;
@@ -17,6 +17,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.EnumSet;
+import javax.enterprise.inject.spi.CDI;
 
 /**
  *
@@ -37,7 +38,7 @@ public class AccountTable extends VersionedEntityDbTable<Account> {
 
     };
     private static final AccountTable accountTable = new AccountTable();
-    
+    private static GenesisDataHolder genesisDataHolder = CDI.current().select(GenesisDataHolder.class).get();
     public static AccountTable getInstance(){
         return accountTable;
     }
@@ -110,7 +111,7 @@ public class AccountTable extends VersionedEntityDbTable<Account> {
                 PreparedStatement pstmt =con.prepareStatement("SELECT ABS(balance) AS total_supply FROM account WHERE id = ?")
         ) {
             int i = 0;
-            pstmt.setLong(++i, Genesis.CREATOR_ID);
+            pstmt.setLong(++i, genesisDataHolder.getGeneratorId());
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getLong("total_supply");

@@ -32,6 +32,9 @@ import com.apollocurrency.aplwallet.apl.core.app.mint.CurrencyMint;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfigUpdater;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerator;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
+import com.apollocurrency.aplwallet.apl.core.consensus.validator.AbstractBlockValidator;
+import com.apollocurrency.aplwallet.apl.core.consensus.validator.DefaultBlockValidator;
 import com.apollocurrency.aplwallet.apl.core.db.TransactionalDataSource;
 import com.apollocurrency.aplwallet.apl.core.db.fulltext.FullTextSearchService;
 import com.apollocurrency.aplwallet.apl.core.http.API;
@@ -196,7 +199,8 @@ public final class AplCore {
                 blockchainConfig = CDI.current().select(BlockchainConfig.class).get();
                 blockchain = CDI.current().select(BlockchainImpl.class).get();
                 transactionProcessor.init();
-                Account.init(databaseManager, propertiesHolder, blockchainProcessor,blockchainConfig,blockchain);
+                Account.init(databaseManager, propertiesHolder, blockchainProcessor,blockchainConfig,blockchain,
+                        CDI.current().select(GenesisDataHolder.class).get());
                 GenesisAccounts.init();
                 AccountRestrictions.init();
                 AppStatus.getInstance().update("Account ledger initialization...");
@@ -233,8 +237,7 @@ public final class AplCore {
                 ThreadPool.scheduleThread("BlockGenerator", () -> CDI.current().select(BlockGenerator.class).get().performGenerationIteration(), 500, TimeUnit.MILLISECONDS);
                 AddOns.init();
                 AppStatus.getInstance().update("API initialization...");
-                Helper2FA.init(databaseManager);
-//signal to API that core is reaqdy to serve requests. Should be removed as soon as all API will be on RestEasy                
+//signal to API that core is reaqdy to serve requests. Should be removed as soon as all API will be on RestEasy
                 ApiSplitFilter.isCoreReady = true;
 
 

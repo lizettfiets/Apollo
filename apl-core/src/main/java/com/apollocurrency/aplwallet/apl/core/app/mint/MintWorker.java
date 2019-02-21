@@ -20,26 +20,23 @@
 
 package com.apollocurrency.aplwallet.apl.core.app.mint;
 
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.Attachment;
-import com.apollocurrency.aplwallet.apl.util.Constants;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import com.apollocurrency.aplwallet.apl.core.app.Convert2;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
+import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.Attachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemCurrencyMinting;
-import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
 import com.apollocurrency.aplwallet.apl.crypto.HashFunction;
 import com.apollocurrency.aplwallet.apl.util.AplException;
+import com.apollocurrency.aplwallet.apl.util.Constants;
 import com.apollocurrency.aplwallet.apl.util.TrustAllSSLProvider;
 import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.slf4j.Logger;
-
-import javax.net.ssl.HttpsURLConnection;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -68,8 +65,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
-import static org.slf4j.LoggerFactory.getLogger;
+import javax.net.ssl.HttpsURLConnection;
 
 public class MintWorker implements Runnable{
     private boolean done = false;
@@ -78,7 +74,6 @@ public class MintWorker implements Runnable{
     // TODO: YL remove static instance later
     private PropertiesHolder propertiesHolder;
     private BlockchainConfig blockchainConfig;
-
     public MintWorker(PropertiesHolder propertiesHolder, BlockchainConfig blockchainConfig) {
         this.blockchainConfig=blockchainConfig;
         this.propertiesHolder=propertiesHolder;

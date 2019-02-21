@@ -6,7 +6,9 @@ package com.apollocurrency.aplwallet.apl.core.consensus;
 
 import com.apollocurrency.aplwallet.apl.core.account.AccountService;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
+import com.apollocurrency.aplwallet.apl.core.consensus.acceptor.BlockAcceptor;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerationAlgoProvider;
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.core.transaction.UnconfirmedTransactionService;
 
 import javax.inject.Inject;
@@ -27,12 +29,16 @@ public class ConsensusFacadeHolder {
     private final UnconfirmedTransactionService unconfirmedTransactionService;
     private final AccountService accountService;
     private final BlockAcceptor blockAcceptor;
+    private final GenesisDataHolder genesisDataHolder;
 
     @Inject
     public ConsensusFacadeHolder(BlockchainConfig blockchainConfig,
                                  @Named("newBlockAlgoProvider") BlockAlgoProvider newBlockAlgoProvider,
                                  @Named("oldBlockAlgoProvider") BlockAlgoProvider oldBlockAlgoProvider,
-                                 BlockGenerationAlgoProvider blockGenerationAlgoProvider, UnconfirmedTransactionService unconfirmedTransactionService, AccountService accountService, BlockAcceptor blockAcceptor) {
+                                 BlockGenerationAlgoProvider blockGenerationAlgoProvider,
+                                 UnconfirmedTransactionService unconfirmedTransactionService, AccountService accountService,
+                                 BlockAcceptor blockAcceptor,
+                                 GenesisDataHolder genesisDataHolder) {
         this.blockchainConfig = blockchainConfig;
         this.newBlockAlgoProvider = newBlockAlgoProvider;
         this.oldBlockAlgoProvider = oldBlockAlgoProvider;
@@ -41,6 +47,7 @@ public class ConsensusFacadeHolder {
         this.accountService = accountService;
         this.blockAcceptor = blockAcceptor;
         this.diffAlgo = -1;
+        this.genesisDataHolder = genesisDataHolder;
     }
 
     public ConsensusFacade getConsensusFacade() {
@@ -54,7 +61,7 @@ public class ConsensusFacadeHolder {
                         blockGenerationAlgoProvider,
                         accountService,
                         unconfirmedTransactionService,
-                        blockAcceptor);
+                        blockAcceptor, genesisDataHolder);
             }
             return diffAdjustingFacade;
         } else if (currentDiffAlgo == 0) {
@@ -66,7 +73,7 @@ public class ConsensusFacadeHolder {
                         blockGenerationAlgoProvider,
                         accountService,
                         unconfirmedTransactionService,
-                        blockAcceptor);
+                        blockAcceptor, genesisDataHolder);
             }
             return defaultFacade;
         } else {

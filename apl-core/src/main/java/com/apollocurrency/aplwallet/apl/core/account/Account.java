@@ -20,6 +20,7 @@
 
 package com.apollocurrency.aplwallet.apl.core.account;
 
+import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
 import com.apollocurrency.aplwallet.apl.core.db.TransactionalDataSource;
 import com.apollocurrency.aplwallet.apl.util.Constants;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -44,7 +45,6 @@ import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
 import com.apollocurrency.aplwallet.apl.core.monetary.CurrencyTransfer;
 import com.apollocurrency.aplwallet.apl.core.app.DatabaseManager;
 import com.apollocurrency.aplwallet.apl.core.monetary.Exchange;
-import com.apollocurrency.aplwallet.apl.core.app.Genesis;
 import com.apollocurrency.aplwallet.apl.core.app.ShufflingTransaction;
 import com.apollocurrency.aplwallet.apl.core.app.Trade;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
@@ -84,6 +84,7 @@ public final class Account {
     static Blockchain blockchain;
     private static BlockchainProcessor blockchainProcessor;
     private static DatabaseManager databaseManager;
+    private static GenesisDataHolder genesisDataHolder;
 
     private static  ConcurrentMap<DbKey, byte[]> publicKeyCache = null; 
            
@@ -107,13 +108,15 @@ public final class Account {
                             PropertiesHolder propertiesHolder,
                             BlockchainProcessor blockchainProcessorParam,
                             BlockchainConfig blockchainConfigParam,
-                            Blockchain blockchainParam
+                            Blockchain blockchainParam,
+                            GenesisDataHolder genesisDataHolder
                             )
     {
         databaseManager = databaseManagerParam;
         blockchainProcessor = blockchainProcessorParam;
         blockchainConfig = blockchainConfigParam;
         blockchain = blockchainParam;
+        genesisDataHolder = genesisDataHolder;
         
         if(propertiesHolder.getBooleanProperty("apl.enablePublicKeyCache")){
             publicKeyCache =  new ConcurrentHashMap<>();
@@ -422,7 +425,7 @@ public final class Account {
     }
 
     static void checkBalance(long accountId, long confirmed, long unconfirmed) {
-        if (accountId == Genesis.CREATOR_ID) {
+        if (accountId == genesisDataHolder.getGeneratorId()) {
             return;
         }
         if (confirmed < 0) {
