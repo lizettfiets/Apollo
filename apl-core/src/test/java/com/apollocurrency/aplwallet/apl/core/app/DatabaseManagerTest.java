@@ -17,6 +17,7 @@ import org.jboss.weld.junit5.WeldSetup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -117,6 +118,7 @@ class DatabaseManagerTest {
 //        databaseManager.shutdown();
     }
 
+    @Disabled
     @Test
     void createAndAddShard() throws Exception {
         databaseManager = new DatabaseManager(baseDbProperties, propertiesHolder);
