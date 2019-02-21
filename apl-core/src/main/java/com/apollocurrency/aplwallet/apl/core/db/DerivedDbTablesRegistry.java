@@ -5,7 +5,6 @@ package com.apollocurrency.aplwallet.apl.core.db;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import javax.inject.Singleton;
 
 /**
  * This is regitry for tables that is used in BlockchainProcessorImpl for 
@@ -20,10 +19,10 @@ public class DerivedDbTablesRegistry {
     public static DerivedDbTablesRegistry getInstance(){
         return instance;
     } 
-    public void registerDerivedTable(DerivedDbTable table) {
+    public synchronized void registerDerivedTable(DerivedDbTable table) {
         derivedTables.add(table);
     } 
-    public List<DerivedDbTable> getDerivedTables() {
+    public synchronized List<DerivedDbTable> getDerivedTables() {
         return derivedTables;
     }     
   }

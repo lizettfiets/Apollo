@@ -131,7 +131,7 @@ public final class AplCore {
         Peers.shutdown();
         if (fullTextSearchService != null) {
             fullTextSearchService.shutdown();
-            LOG.info("blockchainProcessor Shutdown...");
+            LOG.info("fulltextSearch Shutdown...");
         }
         if (databaseManager != null) {
             databaseManager.shutdown();
