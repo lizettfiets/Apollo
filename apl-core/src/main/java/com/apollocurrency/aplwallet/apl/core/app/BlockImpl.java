@@ -273,12 +273,16 @@ public final class BlockImpl implements Block {
     static boolean requireTimeout(int version) {
         return Block.ADAPTIVE_BLOCK_VERSION == version || Block.INSTANT_BLOCK_VERSION == version;
     }
+
+    private volatile boolean withSignature = false;
     byte[] bytes() {
-        if (bytes == null || blockSignature == null) {
+        if (bytes == null || !withSignature) {
+            int capacity = 4 + 4 + 8 + 4 + 8 + 8 + 4 + 32 + 32 + 32 + 32 +
+                    (requireTimeout(version) ? 4 : 0) + (blockSignature != null ? 64 :
+                    0);
+            withSignature = blockSignature != null;
             ByteBuffer buffer =
-                    ByteBuffer.allocate(4 + 4 + 8 + 4 + 8 + 8 + 4 + 32 + 32 + 32 + 32 +
-                            (requireTimeout(version) ? 4 : 0) + (blockSignature != null ? 64 :
-                    0));
+                    ByteBuffer.allocate(capacity);
             buffer.order(ByteOrder.LITTLE_ENDIAN);
             buffer.putInt(version);
             buffer.putInt(timestamp);
