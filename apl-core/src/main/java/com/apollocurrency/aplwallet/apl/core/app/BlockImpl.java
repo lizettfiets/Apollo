@@ -274,7 +274,7 @@ public final class BlockImpl implements Block {
         return Block.ADAPTIVE_BLOCK_VERSION == version || Block.INSTANT_BLOCK_VERSION == version;
     }
     byte[] bytes() {
-        if (bytes == null) {
+        if (bytes == null || blockSignature == null) {
             ByteBuffer buffer =
                     ByteBuffer.allocate(4 + 4 + 8 + 4 + 8 + 8 + 4 + 32 + 32 + 32 + 32 +
                             (requireTimeout(version) ? 4 : 0) + (blockSignature != null ? 64 :
