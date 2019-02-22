@@ -147,6 +147,13 @@ public class DefaultConsensusFacade implements ConsensusFacade {
     }
 
     @Override
+    public Block prepareBlock(Block block) {
+        long id = blockAlgoProvider.calculateId(block);
+        block.setId(id);
+        return block;
+    }
+
+    @Override
     public Block generateGenesisBlock() {
         BlockImpl genesisBlock = new BlockImpl(genesisDataHolder.getGenesisPublicKey(), genesisDataHolder.getAccountBytes(),
                 blockchainConfig.getCurrentConfig().getInitialBaseTarget());

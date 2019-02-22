@@ -8,7 +8,6 @@ import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.BlockImpl;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
 import com.apollocurrency.aplwallet.apl.core.app.TransactionImpl;
-import com.apollocurrency.aplwallet.apl.core.consensus.BlockAlgoProvider;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.util.AplException;
 import org.json.simple.JSONArray;
@@ -22,12 +21,10 @@ import javax.inject.Singleton;
 @Singleton
 public class BlockJsonConverter {
     private BlockService service;
-    private BlockAlgoProvider blockAlgoProvider;
 
     @Inject
-    public BlockJsonConverter(BlockService blockService, BlockAlgoProvider blockAlgoProvider) {
+    public BlockJsonConverter(BlockService blockService) {
         this.service = blockService;
-        this.blockAlgoProvider = blockAlgoProvider;
     }
 
     public JSONObject toJson(Block block) {
@@ -46,6 +43,8 @@ public class BlockJsonConverter {
         json.put("timeout", block.getTimeout());
 
         JSONArray transactionsData = new JSONArray();
+        // retrieve transactions from db. Note that this is a temporal solution, in future releases transactions should be retrieved in proper
+        // place.
         service.getTransactions(block).forEach(transaction -> transactionsData.add(transaction.getJSONObject()));
         json.put("transactions", transactionsData);
         return json;
@@ -71,8 +70,6 @@ public class BlockJsonConverter {
             }
             BlockImpl block = new BlockImpl(version, timestamp, previousBlock, totalAmountATM, totalFeeATM, payloadLength, payloadHash, generatorPublicKey,
                     generationSignature, blockSignature, previousBlockHash, timeout, blockTransactions);
-        long id = blockAlgoProvider.calculateId(block);
-        block.setId(id);
         return block;
 
     }

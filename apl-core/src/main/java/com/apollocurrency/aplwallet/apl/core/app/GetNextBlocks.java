@@ -106,7 +106,8 @@ public class GetNextBlocks implements Callable<List<Block>> {
         try {
             int count = stop - start;
             for (JSONObject blockData : nextBlocks) {
-                blockList.add(blockJsonConverter.fromJson(blockData));
+                Block block = blockJsonConverter.fromJson(blockData);
+                blockList.add(block);
                 if (--count <= 0) {
                     break;
                 }

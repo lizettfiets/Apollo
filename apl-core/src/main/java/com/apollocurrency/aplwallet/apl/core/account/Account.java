@@ -63,6 +63,8 @@ import com.apollocurrency.aplwallet.apl.util.Listeners;
 import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
 import org.slf4j.Logger;
 
+import javax.enterprise.inject.spi.CDI;
+
 /**
  * Used as global access point to all interactions with account and public keys
  * TODO Required massive refactoring
@@ -84,7 +86,7 @@ public final class Account {
     static Blockchain blockchain;
     private static BlockchainProcessor blockchainProcessor;
     private static DatabaseManager databaseManager;
-    private static GenesisDataHolder genesisDataHolder;
+    private static GenesisDataHolder genesisDataHolder = CDI.current().select(GenesisDataHolder.class).get();
 
     private static  ConcurrentMap<DbKey, byte[]> publicKeyCache = null; 
            

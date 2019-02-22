@@ -534,6 +534,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                     Peer peer = nextBlocks.getPeer();
                     int index = nextBlocks.getStart() + 1;
                     for (Block block : blockList) {
+                        consensusFacadeHolder.getConsensusFacade().prepareBlock(block);
                         if (block.getId() != chainBlockIds.get(index)) {
                             break;
                         }
@@ -748,9 +749,10 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
     @Inject
     private BlockchainProcessorImpl(BlockValidator validator, BlockService service, ConsensusFacadeHolder consensusFacadeHolder,
                                     BlockJsonConverter jsonConverter, BlockGenerator blockGenerator,
-                                    PrunableTransactionsStore prunableTransactionsStore) {
+                                    PrunableTransactionsStore prunableTransactionsStore, BlockchainConfigUpdater blockchainConfigUpdater) {
         final int trimFrequency = propertiesHolder.getIntProperty("apl.trimFrequency");
         this.validator = validator;
+        this.blockchainConfigUpdater = blockchainConfigUpdater;
         this.blockService = service;
         this.consensusFacadeHolder = consensusFacadeHolder;
         this.blockJsonConverter = jsonConverter;
@@ -926,9 +928,11 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
             if (peerBlockPreviousBlockId == lastBlock.getId()) {
                 log.trace("push peer last block");
                 Block block = blockJsonConverter.fromJson(request);
+                block = consensusFacadeHolder.getConsensusFacade().prepareBlock(block);
                 pushBlock(block);
             } else if (peerBlockPreviousBlockId == lastBlock.getPreviousBlockId()) { //peer block is a candidate to replace our last block
                 Block block = blockJsonConverter.fromJson(request);
+                block = consensusFacadeHolder.getConsensusFacade().prepareBlock(block);
                 //try to replace our last block by peer block only when timestamp of peer block is less than timestamp of our block or when
                 // timestamps are equal but timeout of peer block is greater, so that peer block is better.
                 if (((block.getTimestamp() < lastBlock.getTimestamp()

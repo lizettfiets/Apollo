@@ -24,6 +24,8 @@ public interface ConsensusFacade {
 
     Block generateBlock(Generator generator, Block lastBlock, int currentTimeWithForgingDelay);
 
+    Block prepareBlock(Block block);
+
     Block generateGenesisBlock();
 
     List<Transaction> acceptBlock(Block block, List<Transaction> validPhasedTransactions, List<Transaction> invalidPhasedTransactions,
