@@ -20,25 +20,11 @@
 
 package com.apollocurrency.aplwallet.apl.core.peer;
 
-import javax.enterprise.inject.spi.CDI;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainImpl;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessorImpl;
 import com.apollocurrency.aplwallet.apl.core.app.EpochTime;
-import com.apollocurrency.aplwallet.apl.core.app.Time;
 import com.apollocurrency.aplwallet.apl.core.app.TransactionProcessor;
 import com.apollocurrency.aplwallet.apl.core.app.TransactionProcessorImpl;
 import com.apollocurrency.aplwallet.apl.util.CountingInputReader;
@@ -56,6 +42,19 @@ import org.json.simple.JSONValue;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import javax.enterprise.inject.spi.CDI;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 public final class PeerServlet extends WebSocketServlet {
     private static final Logger LOG = LoggerFactory.getLogger(PeerServlet.class);
@@ -353,7 +352,7 @@ public final class PeerServlet extends WebSocketServlet {
             }
             peer.setLastInboundRequest(timeService.getEpochTime());
             if (peerRequestHandler.rejectWhileDownloading()) {
-                if (blockchainProcessor.isDownloading()) {
+                if (lookupBlockchainProcessor().isDownloading()) {
                     return DOWNLOADING;
                 }
                 if (propertiesHolder.isLightClient()) {
