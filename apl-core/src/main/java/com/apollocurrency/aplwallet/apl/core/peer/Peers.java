@@ -230,7 +230,7 @@ public final class Peers {
             }
         }
 
-        myPeerServerPort = propertiesHolder.getIntProperty("apl.peerServerPort");
+        myPeerServerPort = propertiesHolder.getIntProperty("apl.myPeerServerPort");
         shareMyAddress = propertiesHolder.getBooleanProperty("apl.shareMyAddress") && ! propertiesHolder.isOffline();
 
         enablePeerUPnP = propertiesHolder.getBooleanProperty("apl.enablePeerUPnP");
@@ -459,6 +459,7 @@ public final class Peers {
                 final String host = propertiesHolder.getStringProperty("apl.peerServerHost");
                 connector.setHost(host);
                 connector.setIdleTimeout(propertiesHolder.getIntProperty("apl.peerServerIdleTimeout"));
+                LOG.info("Start peer websocket server host = {} port={}", host, port);
                 connector.setReuseAddress(true);
                 peerServer.addConnector(connector);
 

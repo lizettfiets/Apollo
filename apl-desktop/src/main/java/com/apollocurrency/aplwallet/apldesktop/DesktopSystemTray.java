@@ -26,7 +26,7 @@ import com.apollocurrency.aplwallet.apl.core.app.AplCoreRuntime;
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainImpl;
-import com.apollocurrency.aplwallet.apl.core.app.Converter;
+import com.apollocurrency.aplwallet.apl.core.app.Convert2;
 import com.apollocurrency.aplwallet.apl.core.app.EpochTime;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.consensus.forging.BlockGenerator;
@@ -59,7 +59,6 @@ public class DesktopSystemTray {
     private static volatile EpochTime timeService = CDI.current().select(EpochTime.class).get();
     private static PropertiesHolder propertiesHolder = CDI.current().select(PropertiesHolder.class).get();
     private static BlockGenerator blockGenerator = CDI.current().select(BlockGenerator.class).get();
-    private static Converter converter = CDI.current().select(Converter.class).get();
 
     private SystemTray tray;
     private final JFrame wrapper = new JFrame();
@@ -179,7 +178,7 @@ public class DesktopSystemTray {
 
         StringBuilder generators = new StringBuilder();
         for (Generator generator : allGenerators) {
-            generators.append(converter.rsAccount(generator.getAccountId())).append(' ');
+            generators.append(Convert2.rsAccount(generator.getAccountId())).append(' ');
         }
         Object optionPaneBackground = UIManager.get("OptionPane.background");
         UIManager.put("OptionPane.background", Color.WHITE);
@@ -212,7 +211,7 @@ public class DesktopSystemTray {
             addLabelRow(statusPanel, "Last Block");
             addDataRow(statusPanel, "Height", String.valueOf(lastBlock.getHeight()));
             addDataRow(statusPanel, "Timestamp", String.valueOf(lastBlock.getTimestamp()));
-            addDataRow(statusPanel, "Time", String.valueOf(new Date(converter.fromEpochTime(lastBlock.getTimestamp()))));
+            addDataRow(statusPanel, "Time", String.valueOf(new Date(Convert2.fromEpochTime(lastBlock.getTimestamp()))));
             addDataRow(statusPanel, "Seconds passed", String.valueOf(timeService.getEpochTime() - lastBlock.getTimestamp()));
             addDataRow(statusPanel, "Forging", String.valueOf(allGenerators.size() > 0));
             if (allGenerators.size() > 0) {
