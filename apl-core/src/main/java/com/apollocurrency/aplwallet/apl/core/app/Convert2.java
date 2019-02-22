@@ -30,11 +30,12 @@ import javax.enterprise.inject.spi.CDI;
 
 public final class Convert2 {
     private static GenesisDataHolder genesisDataHolder = CDI.current().select(GenesisDataHolder.class).get();
+    private static BlockchainConfig blockchainConfig = CDI.current().select(BlockchainConfig.class).get();
     private Convert2() {} //never
 
     //TODO: rewrite other classes without defaultRsAccount
     public static String rsAccount(long accountId) {
-        return CDI.current().select(BlockchainConfig .class).get().getAccountPrefix() + "-" + Crypto.rsEncode(accountId);
+        return blockchainConfig.getAccountPrefix() + "-" + Crypto.rsEncode(accountId);
     }
     //avoid static initialization chain when call Constants.ACCOUNT_PREFIX in rsAccount method
     public static String defaultRsAccount(long accountId) {

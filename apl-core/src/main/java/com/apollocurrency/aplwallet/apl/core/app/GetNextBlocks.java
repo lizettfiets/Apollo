@@ -22,12 +22,12 @@ import javax.enterprise.inject.spi.CDI;
 /**
  * Callable method to get the next block segment from the selected peer
  */
-public class GetNextBlocks implements Callable<List<BlockImpl>> {
+public class GetNextBlocks implements Callable<List<Block>> {
     private static final Logger log = LoggerFactory.getLogger(GetNextBlocks.class);
     
     private BlockchainConfig blockchainConfig;   
     /** Callable future */
-    private Future<List<BlockImpl>> future;
+    private Future<List<Block>> future;
     /** Peer */
     private Peer peer;
     /** Block identifier list */
@@ -68,7 +68,7 @@ public class GetNextBlocks implements Callable<List<BlockImpl>> {
      * @return                      List of blocks or null if an error occurred
      */
     @Override
-    public List<BlockImpl> call() {
+    public List<Block> call() {
         requestCount++;
         //
         // Build the block request list
@@ -102,7 +102,7 @@ public class GetNextBlocks implements Callable<List<BlockImpl>> {
             peer.blacklist("Too many nextBlocks");
             return null;
         }
-        List<BlockImpl> blockList = new ArrayList<>(nextBlocks.size());
+        List<Block> blockList = new ArrayList<>(nextBlocks.size());
         try {
             int count = stop - start;
             for (JSONObject blockData : nextBlocks) {
@@ -124,7 +124,7 @@ public class GetNextBlocks implements Callable<List<BlockImpl>> {
      *
      * @return                      Callable future
      */
-    public Future<List<BlockImpl>> getFuture() {
+    public Future<List<Block>> getFuture() {
         return future;
     }
 
@@ -133,7 +133,7 @@ public class GetNextBlocks implements Callable<List<BlockImpl>> {
      *
      * @param   future              Callable future
      */
-    public void setFuture(Future<List<BlockImpl>> future) {
+    public void setFuture(Future<List<Block>> future) {
         this.future = future;
     }
 

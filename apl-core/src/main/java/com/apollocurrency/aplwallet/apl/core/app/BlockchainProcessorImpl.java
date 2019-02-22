@@ -511,7 +511,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                         break download;
                     }
                     nextBlocks.setPeer(peer);
-                    Future<List<BlockImpl>> future = networkService.submit(nextBlocks);
+                    Future<List<Block>> future = networkService.submit(nextBlocks);
                     nextBlocks.setFuture(future);
                 }
                 //
@@ -521,7 +521,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                 Iterator<GetNextBlocks> it = getList.iterator();
                 while (it.hasNext()) {
                     GetNextBlocks nextBlocks = it.next();
-                    List<BlockImpl> blockList;
+                    List<Block> blockList;
                     try {
                         blockList = nextBlocks.getFuture().get();
                     } catch (ExecutionException exc) {
@@ -1632,7 +1632,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                                         JSONObject blockJSON =
                                                 (JSONObject) JSONValue.parse(blockJsonConverter.toJson(currentBlock).toJSONString());
                                         if (!Arrays.equals(blockBytes,
-                                                blockJsonConverter.fromJson(blockJSON).bytes())) {
+                                                blockJsonConverter.fromJson(blockJSON).getBytes())) {
                                             throw new AplException.NotValidException("Block JSON cannot be parsed back to the same block");
                                         }
                                         validateTransactions(currentBlock, blockchain.getLastBlock(), curTime, duplicates, true);

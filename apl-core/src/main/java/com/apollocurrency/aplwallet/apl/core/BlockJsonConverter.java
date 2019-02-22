@@ -8,6 +8,7 @@ import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.BlockImpl;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
 import com.apollocurrency.aplwallet.apl.core.app.TransactionImpl;
+import com.apollocurrency.aplwallet.apl.core.consensus.BlockAlgoProvider;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.util.AplException;
 import org.json.simple.JSONArray;
@@ -21,9 +22,12 @@ import javax.inject.Singleton;
 @Singleton
 public class BlockJsonConverter {
     private BlockService service;
+    private BlockAlgoProvider blockAlgoProvider;
+
     @Inject
-    public BlockJsonConverter(BlockService blockService) {
+    public BlockJsonConverter(BlockService blockService, BlockAlgoProvider blockAlgoProvider) {
         this.service = blockService;
+        this.blockAlgoProvider = blockAlgoProvider;
     }
 
     public JSONObject toJson(Block block) {
@@ -46,7 +50,7 @@ public class BlockJsonConverter {
         json.put("transactions", transactionsData);
         return json;
     }
-    public BlockImpl fromJson(JSONObject blockData) throws AplException.NotValidException {
+    public Block fromJson(JSONObject blockData) throws AplException.NotValidException {
 //        try {
             int version = ((Long) blockData.get("version")).intValue();
             int timestamp = ((Long) blockData.get("timestamp")).intValue();
@@ -67,15 +71,10 @@ public class BlockJsonConverter {
             }
             BlockImpl block = new BlockImpl(version, timestamp, previousBlock, totalAmountATM, totalFeeATM, payloadLength, payloadHash, generatorPublicKey,
                     generationSignature, blockSignature, previousBlockHash, timeout, blockTransactions);
-//            if (!block.checkSignature()) {
-//                throw new AplException.NotValidException("Invalid block signature");
-//            }
-            return block;
-//        } catch (AplException.NotValidException|RuntimeException e) {
-//            LOG.debug("Failed to parse block: " + blockData.toJSONString());
-//            LOG.debug("Exception: " + e.getMessage());
-//            throw e;
-//        }
+        long id = blockAlgoProvider.calculateId(block);
+        block.setId(id);
+        return block;
+
     }
 
 

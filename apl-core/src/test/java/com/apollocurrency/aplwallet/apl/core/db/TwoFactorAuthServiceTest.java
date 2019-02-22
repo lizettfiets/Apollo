@@ -24,12 +24,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.apollocurrency.aplwallet.api.dto.Status2FA;
+import com.apollocurrency.aplwallet.apl.core.app.Convert2;
 import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthDetails;
 import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthService;
 import com.apollocurrency.aplwallet.apl.core.app.TwoFactorAuthServiceImpl;
 import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.consensus.genesis.GenesisDataHolder;
-import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.testutil.TwoFactorAuthUtil;
 import com.j256.twofactorauth.TimeBasedOneTimePasswordUtil;
 import org.jboss.weld.junit.MockBean;
@@ -46,18 +46,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.security.GeneralSecurityException;
 import java.util.Random;
 
-@ExtendWith(MockitoExtension.class)
+
+
 @EnableWeld
+@ExtendWith(MockitoExtension.class)
 public class TwoFactorAuthServiceTest {
     @Mock
     private TwoFactorAuthRepository repository;
     private TwoFactorAuthService service;
-    @Mock
-    BlockchainConfig blockchainConfig;
-@WeldSetup
-public WeldInitiator weld = WeldInitiator.from().addBeans(MockBean.of(Mockito.mock(GenesisDataHolder.class), GenesisDataHolder.class))
-        .addBeans(MockBean.of(blockchainConfig, BlockchainConfig.class))
-        .build();
+    // do not use @Mock for CDI beans, because CDI will init with nulls
+    private BlockchainConfig blockchainConfig = Mockito.mock(BlockchainConfig.class);
+
+    @WeldSetup
+    public WeldInitiator weld = WeldInitiator.from(Convert2.class)
+            .addBeans(MockBean.of(Mockito.mock(GenesisDataHolder.class), GenesisDataHolder.class))
+            .addBeans(MockBean.of(blockchainConfig, BlockchainConfig.class))
+            .build();
     @BeforeEach
     public void setUp() throws Exception {
         service = new TwoFactorAuthServiceImpl(repository, "test");
@@ -68,7 +72,7 @@ public WeldInitiator weld = WeldInitiator.from().addBeans(MockBean.of(Mockito.mo
         Mockito.doReturn("APL").when(blockchainConfig).getAccountPrefix();
         doReturn(true).when(repository).add(any(TwoFactorAuthEntity.class));
         TwoFactorAuthDetails twoFactorAuthDetails = service.enable(ENTITY3.getAccount());
-        TwoFactorAuthUtil.verifySecretCode(twoFactorAuthDetails, Convert.defaultRsAccount(ENTITY3.getAccount()));
+        TwoFactorAuthUtil.verifySecretCode(twoFactorAuthDetails, Convert2.defaultRsAccount(ENTITY3.getAccount()));
         assertEquals(Status2FA.OK, twoFactorAuthDetails.getStatus2Fa());
         verify(repository, times(1)).add(any(TwoFactorAuthEntity.class));
     }
@@ -87,7 +91,7 @@ public WeldInitiator weld = WeldInitiator.from().addBeans(MockBean.of(Mockito.mo
         doReturn(ENTITY2).when(repository).get(ACCOUNT2.getId());
 
         TwoFactorAuthDetails details = service.enable(ACCOUNT2.getId());
-        TwoFactorAuthUtil.verifySecretCode(details, Convert.defaultRsAccount(ACCOUNT2.getId()));
+        TwoFactorAuthUtil.verifySecretCode(details, Convert2.defaultRsAccount(ACCOUNT2.getId()));
         assertEquals(ACCOUNT2_2FA_SECRET_BASE32, details.getSecret());
     }
 
