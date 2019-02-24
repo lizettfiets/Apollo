@@ -122,7 +122,7 @@ public class DefaultConsensusFacade implements ConsensusFacade {
         if (forger.getHitTime() <= generationTimestamp) {
             int potentialBlockTimestamp = generationAlgoProvider.getBlockTimestamp(forger.getHitTime(), generationTimestamp);
             int numberOfTxsAtGenerationTimestamp = unconfirmedTransactionService.getUnconfirmedTransactions(lastBlock, generationTimestamp).size();
-            int numberOfTxsAtBlockTimestamp = unconfirmedTransactionService.getUnconfirmedTransactions(lastBlock, generationTimestamp).size();
+            int numberOfTxsAtBlockTimestamp = unconfirmedTransactionService.getUnconfirmedTransactions(lastBlock, potentialBlockTimestamp).size();
 
             Pair<Integer, Integer> timeoutAndVersion = generationAlgoProvider.getBlockTimeoutAndVersion(potentialBlockTimestamp,
                     generationTimestamp,
