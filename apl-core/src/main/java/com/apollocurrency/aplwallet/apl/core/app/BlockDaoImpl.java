@@ -630,7 +630,7 @@ public class BlockDaoImpl implements BlockDao {
                         dataSource.commit(false);
                     }
 	            }
-                Block lastBlock = findLastBlock();
+                Block lastBlock = findLastBlock(true);
                 lastBlock.setNextBlockId(0);
                 try (PreparedStatement pstmt = con.prepareStatement("UPDATE block SET next_block_id = NULL WHERE id = ?")) {
                     pstmt.setLong(1, lastBlock.getId());
