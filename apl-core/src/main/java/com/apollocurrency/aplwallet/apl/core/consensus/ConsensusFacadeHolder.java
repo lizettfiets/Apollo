@@ -20,6 +20,7 @@ public class ConsensusFacadeHolder {
     // cached values for better performance
     private ConsensusFacade defaultFacade;
     private ConsensusFacade diffAdjustingFacade;
+    private ConsensusFacade enhancedFacade;
     private int diffAlgo;
 
     private final BlockchainConfig blockchainConfig;
@@ -76,6 +77,18 @@ public class ConsensusFacadeHolder {
                         blockAcceptor, genesisDataHolder);
             }
             return defaultFacade;
+        } else if (currentDiffAlgo == 2) {
+            if (enhancedFacade == null || diffAlgo != 2) {
+                diffAlgo = 2;
+                enhancedFacade = new ExtrapolationFacade(
+                        blockchainConfig,
+                        newBlockAlgoProvider,
+                        blockGenerationAlgoProvider,
+                        accountService,
+                        unconfirmedTransactionService,
+                        blockAcceptor, genesisDataHolder);
+            }
+            return enhancedFacade;
         } else {
             throw new RuntimeException("Unable to create consensus facade for diff algo = " + currentDiffAlgo);
         }
