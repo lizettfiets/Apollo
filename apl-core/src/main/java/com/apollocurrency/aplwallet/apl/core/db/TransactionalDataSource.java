@@ -53,7 +53,6 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
     private static long stmtThreshold;
     private static long txThreshold;
     private static long txInterval;
-    private static boolean enableSqlLogs;
 
     private final ThreadLocal<DbConnectionWrapper> localConnection = new ThreadLocal<>();
     private final ThreadLocal<Map<String,Map<DbKey,Object>>> transactionCaches = new ThreadLocal<>();
@@ -75,7 +74,6 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
         stmtThreshold = getPropertyOrDefault("apl.statementLogThreshold", 1000);
         txThreshold = getPropertyOrDefault("apl.transactionLogThreshold", 5000);
         txInterval = getPropertyOrDefault("apl.transactionLogInterval", 15) * 60 * 1000;
-        enableSqlLogs = TransactionalDataSource.propertiesHolder.getBooleanProperty("apl.enableSqlLogs");
         factory = new FilteredFactoryImpl(stmtThreshold);
     }
 
@@ -88,24 +86,11 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
     public Connection getConnection() throws SQLException {
         Connection con = localConnection.get();
         if (con != null /*&& !con.isClosed() && !super.getConnection().isClosed()*/) {
-            return enableSqlLogs ? new ConnectionSpy(con) : con;
+            return con;
         }
         DbConnectionWrapper realConnection = new DbConnectionWrapper(super.getConnection(), factory,
                 localConnection, transactionCaches, transactionCallback);
-        return enableSqlLogs ? new ConnectionSpy(realConnection) : realConnection;
-    }
-
-    /**
-     * Optional
-     * @param doSqlLog dump sql
-     * @return spied db connection
-     * @throws SQLException
-     */
-    public Connection getConnection(boolean doSqlLog) throws SQLException {
-        if (!enableSqlLogs && doSqlLog) {
-            return new ConnectionSpy(getConnection());
-        }
-        return getConnection();
+        return realConnection;
     }
 
     /**

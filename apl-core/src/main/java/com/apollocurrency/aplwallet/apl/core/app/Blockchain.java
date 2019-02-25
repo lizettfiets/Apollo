@@ -74,6 +74,8 @@ public interface Blockchain {
 
     Block findLastBlock();
 
+    Block findLastBlock(boolean withTransactions);
+
     Block loadBlock(Connection con, ResultSet rs, boolean loadTransactions);
 
     void saveBlock(Connection con, Block block);

@@ -182,6 +182,11 @@ public class BlockchainImpl implements Blockchain {
     }
 
     @Override
+    public Block findLastBlock(boolean withTransactions) {
+        return lookupBlockDao().findLastBlock(withTransactions);
+    }
+
+    @Override
     public Block loadBlock(Connection con, ResultSet rs, boolean loadTransactions) {
         return lookupBlockDao().loadBlock(con, rs, loadTransactions);
     }

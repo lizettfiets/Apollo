@@ -203,6 +203,7 @@ public class DataSourceWrapper implements DataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
+        log.trace("From method: {}", Thread.currentThread().getStackTrace()[3]);
         Connection con = getPooledConnection();
         con.setAutoCommit(true);
         return con;

@@ -36,6 +36,8 @@ public interface BlockDao {
 
     Block findLastBlock();
 
+    Block findLastBlock(boolean withTransactions);
+
     DbIterator<Block> getAllBlocks();
 
     DbIterator<Block> getBlocks(Connection con, PreparedStatement pstmt);

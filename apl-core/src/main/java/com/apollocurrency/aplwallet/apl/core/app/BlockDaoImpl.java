@@ -218,7 +218,7 @@ public class BlockDaoImpl implements BlockDao {
     }
 
     @Override
-    public Block findLastBlock() {
+    public Block findLastBlock(boolean withTransactions) {
         TransactionalDataSource dataSource = lookupDataSource();
         try (Connection con = dataSource.getConnection();
              PreparedStatement pstmt = con.prepareStatement(
@@ -226,13 +226,18 @@ public class BlockDaoImpl implements BlockDao {
             Block block = null;
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    block = loadBlock(con, rs);
+                    block = loadBlock(con, rs, withTransactions);
                 }
             }
             return block;
         } catch (SQLException e) {
             throw new RuntimeException(e.toString(), e);
         }
+    }
+
+    @Override
+    public Block findLastBlock() {
+        return findLastBlock(false);
     }
 
     @Override
@@ -631,7 +636,7 @@ public class BlockDaoImpl implements BlockDao {
                     pstmt.setLong(1, lastBlock.getId());
                     pstmt.executeUpdate();
                 }
-                dataSource.commit();
+                dataSource.commit(false);
                 return lastBlock;
             } catch (SQLException e) {
                 dataSource.rollback();
