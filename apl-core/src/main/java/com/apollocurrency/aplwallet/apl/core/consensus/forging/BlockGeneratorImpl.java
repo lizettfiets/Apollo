@@ -116,7 +116,10 @@ public class BlockGeneratorImpl implements BlockGenerator {
                         sortedGenerators = Collections.unmodifiableList(activeGenerators);
                     }
                     for (Generator generator : sortedGenerators) {
-                        tryGenerateBlock(generator, lastBlock, generationLimit);
+                        boolean generated = tryGenerateBlock(generator, lastBlock, generationLimit);
+                        if (generated) {
+                            return;
+                        }
                     }
                 } finally {
                     blockchain.updateUnlock();
@@ -138,7 +141,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
         return blockchainProcessor;
     }
 
-    private void tryGenerateBlock(Generator generator, Block lastBlock, int generationLimit) throws BlockchainProcessor.BlockNotAcceptedException {
+    private boolean tryGenerateBlock(Generator generator, Block lastBlock, int generationLimit) throws BlockchainProcessor.BlockNotAcceptedException {
         Block block = consensusFacadeHolder.getConsensusFacade().generateBlock(generator, lastBlock, generationLimit);
         boolean tryGenerate = block != null;
         int start = time.getTime();
@@ -157,6 +160,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                 block = consensusFacadeHolder.getConsensusFacade().generateBlock(generator, lastBlock, generationLimit);
             }
         }
+        return block != null;
     }
 
 
@@ -174,7 +178,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                 ConsensusFacade consensusFacade = consensusFacadeHolder.getConsensusFacade();
                 for (Generator generator : sortedGenerators) {
                     if (consensusFacade.compareGeneratorAndBlockTime(generator, anotherBlock, time.getTime()) < 0) {
-                        LOG.debug("{} has better hitTime");
+                        LOG.debug("{} has better hitTime", generator);
                         return true;
                     }
                 }

@@ -935,8 +935,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
                 block = consensusFacadeHolder.getConsensusFacade().prepareBlock(block);
                 //try to replace our last block by peer block only when timestamp of peer block is less than timestamp of our block or when
                 // timestamps are equal but timeout of peer block is greater, so that peer block is better.
-                if (((block.getTimestamp() < lastBlock.getTimestamp()
-                        || block.getTimestamp() == lastBlock.getTimestamp() && block.getTimeout() > lastBlock.getTimeout()))) {
+                if (block.getTimestamp() - block.getTimeout() < lastBlock.getTimestamp() - lastBlock.getTimeout()) {
                     log.trace("Need to replace block");
                     Block lb = lookupBlockhain().getLastBlock();
                     if (lastBlock.getId() != lb.getId()) {

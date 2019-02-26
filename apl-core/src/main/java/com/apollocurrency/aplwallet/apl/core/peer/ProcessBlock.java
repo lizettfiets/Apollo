@@ -52,8 +52,7 @@ final class ProcessBlock extends PeerServlet.PeerRequestHandler {
         int peerBlockTimeout =  timeoutJsonValue == null ? 0 : ((Long)timeoutJsonValue).intValue();
         if (lastBlock.getStringId().equals(previousBlockId) ||
                 (Convert.parseUnsignedLong(previousBlockId) == lastBlock.getPreviousBlockId()
-                        && (lastBlock.getTimestamp() > peerBlockTimestamp ||
-                        peerBlockTimestamp == lastBlock.getTimestamp() && peerBlockTimeout > lastBlock.getTimeout()))) {
+                        && (lastBlock.getTimestamp() - lastBlock.getTimeout() > peerBlockTimestamp - peerBlockTimeout))) {
             Peers.peersService.submit(() -> {
                 try {
                     LOG.debug("API: need to process better peer block");
