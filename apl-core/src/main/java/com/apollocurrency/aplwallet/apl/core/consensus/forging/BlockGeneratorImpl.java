@@ -174,6 +174,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                 ConsensusFacade consensusFacade = consensusFacadeHolder.getConsensusFacade();
                 for (Generator generator : sortedGenerators) {
                     if (consensusFacade.compareGeneratorAndBlockTime(generator, anotherBlock, time.getTime()) < 0) {
+                        LOG.debug("{} has better hitTime");
                         return true;
                     }
                 }
