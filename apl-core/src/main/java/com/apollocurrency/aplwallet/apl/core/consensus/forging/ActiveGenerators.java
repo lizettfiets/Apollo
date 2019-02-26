@@ -4,6 +4,7 @@
 
 package com.apollocurrency.aplwallet.apl.core.consensus.forging;
 
+import com.apollocurrency.aplwallet.apl.core.account.Account;
 import com.apollocurrency.aplwallet.apl.core.app.Block;
 import com.apollocurrency.aplwallet.apl.core.app.Blockchain;
 import com.apollocurrency.aplwallet.apl.core.app.BlockchainProcessor;
@@ -70,13 +71,13 @@ public class ActiveGenerators {
         List<Generator> generatorList;
         if (!generatorsInitialized) {
             activeGeneratorIds.addAll(blockchain.getBlockGenerators(Math.max(1, blockchain.getHeight() - 10000)));
-            activeGeneratorIds.forEach(activeGeneratorId -> activeGenerators.add(new Generator(null, null, activeGeneratorId)));
+            activeGeneratorIds.forEach(activeGeneratorId -> activeGenerators.add(new Generator(null, Account.getPublicKey(activeGeneratorId), activeGeneratorId)));
             LOG.debug(activeGeneratorIds.size() + " block generators found");
             lookupBlockchainProcessor().addListener(block -> {
                 long generatorId = block.getGeneratorId();
                     if (!activeGeneratorIds.contains(generatorId)) {
                         activeGeneratorIds.add(generatorId);
-                        activeGenerators.add(new Generator(null, null, generatorId));
+                        activeGenerators.add(new Generator(null, block.getGeneratorPublicKey(), generatorId));
                     }
             }, BlockchainProcessor.Event.BLOCK_PUSHED);
             generatorsInitialized = true;

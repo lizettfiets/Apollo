@@ -32,8 +32,9 @@ public class BlockGenerationAlgoProviderImpl implements BlockGenerationAlgoProvi
 
     @Override
     public long getHitTime(BigInteger effectiveBalance, BigInteger hit, Block block) {
-        return block.getTimestamp()
-                + hit.divide(BigInteger.valueOf(block.getBaseTarget()).multiply(effectiveBalance)).longValue();
+        BigInteger chance = BigInteger.valueOf(block.getBaseTarget()).multiply(effectiveBalance);
+        long blockTime = hit.divide(chance).longValue();
+        return block.getTimestamp() + blockTime;
     }
 
     @Override

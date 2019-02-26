@@ -45,7 +45,7 @@ public class BlockAlgoProviderImpl implements BlockAlgoProvider {
             long actualBlockTime = block.getTimestamp() - prevBlock.getTimestamp() - block.getTimeout();
             totalTime += actualBlockTime;
         }
-        return totalTime / blocks.size();
+        return totalTime / (blocks.size() - 1);
     }
 
     @Override

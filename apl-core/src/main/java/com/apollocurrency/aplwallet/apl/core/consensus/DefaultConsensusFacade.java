@@ -114,6 +114,7 @@ public class DefaultConsensusFacade implements ConsensusFacade {
         generator.setHit(generationAlgoProvider.calculateHit(generationSignatureHash));
         generator.setHitTime(generationAlgoProvider.getHitTime(generator.getEffectiveBalance(), generator.getHit(), lastBlock));
         generator.setDeadline(Math.max(generator.getHitTime() - lastBlock.getTimestamp(), 0));
+        log.debug("Update {} at height {} ", generator, lastBlock.getHeight());
     }
 
     @Override

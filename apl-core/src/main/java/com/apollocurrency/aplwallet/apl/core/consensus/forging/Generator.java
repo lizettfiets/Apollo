@@ -26,6 +26,7 @@ public class Generator implements Comparable<Generator> {
         return "Generator{" +
                 "accountId=" + Convert2.rsAccount(accountId) +
                 ", effectiveBalance=" + effectiveBalance +
+                ", hit=" + hit +
                 ", deadline=" + deadline +
                 '}';
     }

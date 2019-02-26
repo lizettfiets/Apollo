@@ -40,7 +40,7 @@ public class ExtrapolationFacade extends DefaultConsensusFacade {
 
             List<Block> fakeBlocks = new ArrayList<>(prevBlocks);
 
-            Generator forger = new Generator(EMPTY_32_BYTES);
+            Generator forger = new Generator(EMPTY_32_BYTES, block.getGeneratorPublicKey(), block.getGeneratorId());
 
 
             Block prevFakeBlock = block;
@@ -54,8 +54,9 @@ public class ExtrapolationFacade extends DefaultConsensusFacade {
                 fakeBlocks.add(prevFakeBlock);
                 // using constructor instead of generateBlock method to improve performance
                 // maybe better just to calculate only base target and dont create block itself
+                byte[] generationSignature = getGenerationAlgoProvider().calculateGenerationSignature(block.getGeneratorPublicKey(), prevFakeBlock);
                 newFakeBlock = new BlockImpl(Block.REGULAR_BLOCK_VERSION, (int) forger.getHitTime() + 1, prevFakeBlock.getId(),
-                        0L, 0L, 0, EMPTY_32_BYTES, block.getGeneratorPublicKey(), EMPTY_32_BYTES, EMPTY_64_BYTES, EMPTY_32_BYTES, 0, Collections.emptyList());
+                        0L, 0L, 0, EMPTY_32_BYTES, block.getGeneratorPublicKey(), generationSignature, EMPTY_64_BYTES, EMPTY_32_BYTES, 0, Collections.emptyList());
                 long id = getBlockAlgoProvider().calculateId(block);
                 newFakeBlock.setId(id);
                 super.setPreviousBlock(newFakeBlock, fakeBlocks.subList(Math.max(0, fakeBlocks.size() - 3), fakeBlocks.size()));

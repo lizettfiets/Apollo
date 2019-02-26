@@ -116,7 +116,6 @@ public class BlockGeneratorImpl implements BlockGenerator {
                     }
                     for (Generator generator : sortedGenerators) {
                         tryGenerateBlock(generator, lastBlock, generationLimit);
-                        LOG.info("Generated");
                     }
                 } finally {
                     blockchain.updateUnlock();
