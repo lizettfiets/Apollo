@@ -58,9 +58,11 @@ public interface Blockchain {
 
     Block getBlock(long blockId);
 
+    Block getBlockWithTransactions(long blockId);
+
     Block getBlockAtHeight(int height);
 
-    Block getBlockWithTransactions(int height);
+    Block getBlockAtHeightWithTransactions(int height);
 
     boolean hasBlock(long blockId);
 

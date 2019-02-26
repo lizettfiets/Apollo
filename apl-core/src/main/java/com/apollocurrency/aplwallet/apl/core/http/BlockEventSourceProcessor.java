@@ -114,7 +114,7 @@ public class BlockEventSourceProcessor implements Runnable {
 
     public String getMessage() {
         JSONObject jsonObject = getBlockchainData(blockchain);
-        jsonObject.put("block", JSONData.block(blockchain.getBlockWithTransactions(blockchain.getLastBlock().getHeight()), false, false));
+        jsonObject.put("block", JSONData.block(blockchain.getBlockAtHeightWithTransactions(blockchain.getLastBlock().getHeight()), false, false));
         return jsonObject.toJSONString();
     }
 

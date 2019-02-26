@@ -58,8 +58,6 @@ public class BlockchainConfigUpdater {
         configChangeListener = new ConfigChangeListener(chain.getBlockchainProperties().keySet(), this);
         lookupBlockchainProcessor().addListener(configChangeListener,
                 BlockchainProcessor.Event.AFTER_BLOCK_ACCEPT);
-        lookupBlockchainProcessor().addListener(configChangeListener,
-                BlockchainProcessor.Event.BLOCK_POPPED);
     }
 
     public void deregisterConfigChangeListener() {
@@ -67,8 +65,6 @@ public class BlockchainConfigUpdater {
 
             lookupBlockchainProcessor().removeListener(configChangeListener,
                     BlockchainProcessor.Event.AFTER_BLOCK_ACCEPT);
-            lookupBlockchainProcessor().removeListener(configChangeListener,
-                    BlockchainProcessor.Event.BLOCK_POPPED);
         }
     }
 

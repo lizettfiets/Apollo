@@ -182,7 +182,7 @@ public class DefaultConsensusFacade implements ConsensusFacade {
         byte[] payloadHash = digest.digest();
         final byte[] publicKey = Crypto.getPublicKey(keySeed);
         byte[] generationSignature = generationAlgoProvider.calculateGenerationSignature(publicKey, previousBlock);
-        byte[] previousBlockHash = Crypto.sha256().digest(((BlockImpl) previousBlock).getBytes());
+        byte[] previousBlockHash = Crypto.sha256().digest(previousBlock.getBytes());
 
         BlockImpl block = new BlockImpl(version, blockTimestamp, previousBlock.getId(), totalAmountATM, totalFeeATM, payloadLength,
                 payloadHash, publicKey, generationSignature,null, previousBlockHash, timeout, blockTransactions);

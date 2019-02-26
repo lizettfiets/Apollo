@@ -149,6 +149,15 @@ public class BlockchainImpl implements Blockchain {
     }
 
     @Override
+    public Block getBlockWithTransactions(long blockId) {
+        Block block = lastBlock.get();
+        if (block.getId() == blockId) {
+            return block;
+        }
+        return lookupBlockDao().findBlock(blockId, true);
+    }
+
+    @Override
     public boolean hasBlock(long blockId) {
         return lastBlock.get().getId() == blockId || lookupBlockDao().hasBlock(blockId);
     }
@@ -306,7 +315,7 @@ public class BlockchainImpl implements Blockchain {
     }
 
     @Override
-    public Block getBlockWithTransactions(int height) {
+    public Block getBlockAtHeightWithTransactions(int height) {
         Block block = lookupBlockDao().findBlockAtHeight(height);
         List<Transaction> transactions = Collections.unmodifiableList(transactionDao.findBlockTransactions(block.getId()));
         for (Transaction transaction : transactions) {

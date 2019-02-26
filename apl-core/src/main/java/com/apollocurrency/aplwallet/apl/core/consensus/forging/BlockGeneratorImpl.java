@@ -77,6 +77,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                 blockchain.updateLock();
                 try {
                     Block lastBlock = blockchain.getLastBlock();
+
                     // do not generate blocks when no blocks in db (no genesis) and when blockchain was not sync
                     if (lastBlock == null || lastBlock.getHeight() < blockchainConfig.getLastKnownBlockHeight()) {
                         return;
@@ -88,7 +89,7 @@ public class BlockGeneratorImpl implements BlockGenerator {
                         lastBlockId = lastBlock.getId();
                         // try to create better  block
                         if (lastBlock.getTimestamp() > time.getTime() - 600) {
-                            Block previousBlock = blockchain.getBlock(lastBlock.getPreviousBlockId());
+                            Block previousBlock = blockchain.getBlockWithTransactions(lastBlock.getPreviousBlockId());
                             for (Generator generator : generators.values()) {
                                 ConsensusFacade consensusFacade = consensusFacadeHolder.getConsensusFacade();
                                 consensusFacade.updateGeneratorData(generator, previousBlock);

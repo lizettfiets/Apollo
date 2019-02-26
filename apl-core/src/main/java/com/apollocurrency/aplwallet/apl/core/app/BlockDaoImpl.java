@@ -89,9 +89,13 @@ public class BlockDaoImpl implements BlockDao {
             transactionCache.clear();
         }
     }
-
     @Override
     public Block findBlock(long blockId) {
+        return findBlock(blockId, false);
+    }
+
+    @Override
+    public Block findBlock(long blockId, boolean withTransactions) {
         // Check the block cache
         synchronized (blockCache) {
             Block block = blockCache.get(blockId);
@@ -107,7 +111,7 @@ public class BlockDaoImpl implements BlockDao {
             try (ResultSet rs = pstmt.executeQuery()) {
                 Block block = null;
                 if (rs.next()) {
-                    block = loadBlock(con, rs);
+                    block = loadBlock(con, rs, withTransactions);
                 }
                 return block;
             }

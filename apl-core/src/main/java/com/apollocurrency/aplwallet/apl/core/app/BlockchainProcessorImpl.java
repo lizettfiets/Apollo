@@ -1440,6 +1440,7 @@ public class BlockchainProcessorImpl implements BlockchainProcessor {
         Block previousBlock = blockchain.deleteBlocksFrom(block.getId());
         ((BlockImpl)previousBlock).loadTransactions();
         lookupBlockhain().setLastBlock(previousBlock);
+        blockchainConfigUpdater.rollback(previousBlock.getHeight());
         blockListeners.notify(block, Event.BLOCK_POPPED);
         return previousBlock;
     }
