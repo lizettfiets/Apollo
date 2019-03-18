@@ -9,7 +9,7 @@ import com.apollocurrency.aplwallet.apl.core.http.exchange.model.Error;
 import com.apollocurrency.aplwallet.apl.core.http.exchange.model.TransactionDetails;
 
 import java.util.List;
-import io.swagger.api.NotFoundException;
+import com.apollocurrency.aplwallet.apl.core.http.exchange.api.NotFoundException;
 
 import java.io.InputStream;
 

@@ -12,9 +12,8 @@ import com.apollocurrency.aplwallet.apl.core.rest.endpoint.BackendControlEndpoin
 import com.apollocurrency.aplwallet.apl.core.rest.endpoint.Metadata;
 import com.apollocurrency.aplwallet.apl.core.rest.endpoint.ServerInfoEndpoint;
 
-
 import io.swagger.v3.jaxrs2.integration.resources.OpenApiResource;
-
+import com.apollocurrency.aplwallet.apl.core.http.exchange.api.*;
 /**
  * REST and Swagger configuration and fire-up
  * @author alukin@gmail.com
@@ -33,6 +32,13 @@ public class RestEasyApplication extends Application  {
         //TODO: add all endpoints below
         //swagger openapi endpoint
         set.add(OpenApiResource.class);
+        
+        //DEX endporints
+        set.add(DexGetBalancesApi.class);
+        set.add(DexGetHistoryApi.class);
+        set.add(DexGetOffersApi.class);
+        set.add(DexGetOrderApi.class);
+        set.add(DexWidthrawApi.class);
         return set;
     }
 }
