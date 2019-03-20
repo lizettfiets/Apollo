@@ -1,19 +1,14 @@
 package com.apollocurrency.aplwallet.apl.core.http.exchange.api;
 
-import com.apollocurrency.aplwallet.apl.core.http.exchange.model.*;
 import com.apollocurrency.aplwallet.apl.core.http.exchange.api.DexWidthrawApiService;
 
-import io.swagger.annotations.ApiParam;
 
 import java.math.BigDecimal;
 import com.apollocurrency.aplwallet.apl.core.http.exchange.model.Error;
 import com.apollocurrency.aplwallet.apl.core.http.exchange.model.TransactionDetails;
 
-import java.util.Map;
-import java.util.List;
 import com.apollocurrency.aplwallet.apl.core.http.exchange.api.NotFoundException;
 
-import java.io.InputStream;
 
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;

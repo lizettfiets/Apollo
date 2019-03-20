@@ -24,7 +24,7 @@ import io.firstbridge.cryptolib.impl.AsymJCEElGamalImpl;
 import io.firstbridge.cryptolib.FBCryptoParams;
 import io.firstbridge.cryptolib.dataformat.FBElGamalEncryptedMessage;
 import io.firstbridge.cryptolib.dataformat.FBElGamalKeyPair;
-import io.firstbridge.cryptolib.exception.CryptoNotValidException;
+import io.firstbridge.cryptolib.CryptoNotValidException;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
