@@ -52,14 +52,6 @@ public final class GetAccount extends AbstractAPIRequestHandler {
 
     private static final Logger LOG = getLogger(GetAccount.class);
 
-    private static class GetAccountHolder {
-        private static final GetAccount INSTANCE = new GetAccount();
-    }
-
-    public static GetAccount getInstance() {
-        return GetAccountHolder.INSTANCE;
-    }
-
     public GetAccount() {
         super(new APITag[] {APITag.ACCOUNTS}, "account", "includeLessors", "includeAssets", "includeCurrencies", "includeEffectiveBalance");
     }
