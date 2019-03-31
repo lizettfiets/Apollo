@@ -36,6 +36,7 @@ import com.apollocurrency.aplwallet.apl.core.rest.service.AccountService;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.exchange.model.Balances;
 import com.apollocurrency.aplwallet.apl.util.AplException;
+import javax.enterprise.inject.Vetoed;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONStreamAware;
@@ -44,8 +45,9 @@ import org.slf4j.Logger;
 import javax.enterprise.inject.spi.CDI;
 import javax.servlet.http.HttpServletRequest;
 
-import static org.slf4j.LoggerFactory.getLogger;
 
+import static org.slf4j.LoggerFactory.getLogger;
+@Vetoed
 public final class GetAccount extends AbstractAPIRequestHandler {
 
     private static final Logger LOG = getLogger(GetAccount.class);
@@ -58,7 +60,7 @@ public final class GetAccount extends AbstractAPIRequestHandler {
         return GetAccountHolder.INSTANCE;
     }
 
-    private GetAccount() {
+    public GetAccount() {
         super(new APITag[] {APITag.ACCOUNTS}, "account", "includeLessors", "includeAssets", "includeCurrencies", "includeEffectiveBalance");
     }
 

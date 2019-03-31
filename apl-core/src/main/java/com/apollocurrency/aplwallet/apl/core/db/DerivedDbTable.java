@@ -22,7 +22,6 @@ package com.apollocurrency.aplwallet.apl.core.db;
 
 import com.apollocurrency.aplwallet.apl.core.db.fulltext.FullTextConfig;
 import com.apollocurrency.aplwallet.apl.util.StringValidator;
-import com.apollocurrency.aplwallet.apl.core.app.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -32,18 +31,30 @@ import javax.enterprise.inject.spi.CDI;
 
 public abstract class DerivedDbTable {
 
+    private FullTextConfig fullTextConfig;
+    private DerivedTablesRegistry derivedDbTablesRegistry;
+    
     protected final String table;
-    protected static DatabaseManager databaseManager;
-
+    protected DatabaseManager databaseManager;
+    
+    //TODO: fix injects and remove
+    private void lookupCdi(){
+        if(fullTextConfig==null){
+            fullTextConfig =  CDI.current().select(FullTextConfig.class).get();
+        }
+        if(derivedDbTablesRegistry==null){
+            derivedDbTablesRegistry = CDI.current().select(DerivedTablesRegistry.class).get();
+        }
+    }
+    
     // We should find better place for table init
     protected DerivedDbTable(String table) {
+        lookupCdi();
         StringValidator.requireNonBlank(table, "Table name");
         this.table = table;
-        DerivedDbTablesRegistry.getInstance().registerDerivedTable(this);
-        FullTextConfig.getInstance().registerTable(table);
-        if (databaseManager == null) {
-            databaseManager = CDI.current().select(DatabaseManager.class).get();
-        }
+        derivedDbTablesRegistry.registerDerivedTable(this);
+        fullTextConfig.registerTable(table);
+        databaseManager = CDI.current().select(DatabaseManager.class).get();
     }
 
     public void rollback(int height) {
@@ -73,8 +84,12 @@ public abstract class DerivedDbTable {
         }
     }
 
-    public void trim(int height) {
+    public void trim(int height, TransactionalDataSource dataSource) {
         //nothing to trim
+    }
+
+    public  DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
 
     public void createSearchIndex(Connection con) throws SQLException {
