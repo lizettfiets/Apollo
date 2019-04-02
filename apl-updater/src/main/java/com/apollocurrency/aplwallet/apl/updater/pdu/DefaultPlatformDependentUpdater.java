@@ -6,7 +6,6 @@ package com.apollocurrency.aplwallet.apl.updater.pdu;
 
 import com.apollocurrency.aplwallet.apl.udpater.intfce.UpdateInfo;
 import com.apollocurrency.aplwallet.apl.udpater.intfce.UpdaterMediator;
-import com.apollocurrency.aplwallet.apl.util.env.dirprovider.DirProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +35,9 @@ public class DefaultPlatformDependentUpdater extends AbstractPlatformDependentUp
         };
         LOG.info("Runscript params {}", Arrays.toString(cmdArray));
         LOG.info("Working directory {}", workingDirectory.toFile().getPath());
-        return Runtime.getRuntime().exec(cmdArray, null, DirProvider.getBinDir().toAbsolutePath().toFile());
+        ProcessBuilder builder = new ProcessBuilder();
+        builder.redirectOutput(appDirectory.resolve("updaterScriptLogs.log").toFile());
+        builder.directory(workingDirectory.toFile()).command(cmdArray);
+        return builder.start();
     }
 }
