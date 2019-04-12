@@ -24,12 +24,14 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 
 /**
- * Create Statement and PrepareStatement for use with FilteredConnection
+ * Create wrapped DbStatementWrapper and DbPreparedStatementWrapper for use with DbConnectionWrapper
  */
-public interface FilteredFactory {
+public interface WrappedStatementFactory {
+
+    long DEFAULT_STATEMENT_LOGGING_THRESHOLD = 15_000L;
 
     /**
-     * Create a FilteredStatement for the supplied Statement
+     * Create a DbStatementWrapper for the supplied Statement
      *
      * @param   stmt                Statement
      * @return                      Wrapped statement
@@ -37,19 +39,23 @@ public interface FilteredFactory {
     Statement createStatement(Statement stmt);
 
     /**
-     * Create a FilteredPreparedStatement for the supplied PreparedStatement
+     * Create a DbPreparedStatementWrapper for the supplied PreparedStatement
      *
      * @param   stmt                Prepared statement
      * @param   sql                 SQL statement
      * @return                      Wrapped prepared statement
      */
-    PreparedStatement createPreparedStatement(PreparedStatement stmt, String sql);
+    PreparedStatement createPreparedStatement(PreparedStatement stmt, String sql, long stmtThreshold);
 
+/*
     default Statement createStatement(Statement stmt, String sql) {
         if (sql != null && !sql.isEmpty()) {
-            return createPreparedStatement((PreparedStatement) stmt, sql);
+            return createPreparedStatement((PreparedStatement) stmt, sql, DEFAULT_STATEMENT_LOGGING_THRESHOLD); // 15 secs
         } else {
             return createStatement(stmt);
         }
     }
+*/
+
+    long getStmtThreshold();
 }

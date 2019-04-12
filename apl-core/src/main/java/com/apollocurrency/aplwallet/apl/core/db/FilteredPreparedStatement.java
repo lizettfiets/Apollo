@@ -43,6 +43,7 @@ import java.util.Calendar;
  *
  * The wrapper forwards all methods to the wrapped prepared statement
  */
+@Deprecated
 public class FilteredPreparedStatement extends FilteredStatement implements PreparedStatement {
 
     private final PreparedStatement stmt;

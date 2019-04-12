@@ -29,6 +29,7 @@ import com.apollocurrency.aplwallet.apl.util.injectable.DbProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
+import org.h2.jdbcx.JdbcConnectionPool;
 import org.jdbi.v3.core.ConnectionException;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
@@ -50,59 +51,6 @@ import javax.sql.DataSource;
 public class DataSourceWrapper implements DataSource {
     private static final Logger log = getLogger(DataSourceWrapper.class);
     private static final String DB_INITIALIZATION_ERROR_TEXT = "DatabaseManager was not initialized!";
-
-    @Override
-    public Connection getConnection(String username, String password) {
-        throw new UnsupportedOperationException("Cannot get connection using different username and password instead of default");
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        requireInitialization();
-        return dataSource.unwrap(iface);
-    }
-
-    private void requireInitialization() {
-        if (!initialized) {
-            throw new DbException(DB_INITIALIZATION_ERROR_TEXT);
-        }
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        requireInitialization();
-        return dataSource.isWrapperFor(iface);
-    }
-
-    @Override
-    public PrintWriter getLogWriter() throws SQLException {
-        requireInitialization();
-        return this.dataSource.getLogWriter();
-    }
-
-    @Override
-    public void setLogWriter(PrintWriter out) throws SQLException {
-        requireInitialization();
-        this.dataSource.setLogWriter(out);
-    }
-
-    @Override
-    public void setLoginTimeout(int seconds) throws SQLException {
-        requireInitialization();
-        this.dataSource.setLoginTimeout(seconds);
-    }
-
-    @Override
-    public int getLoginTimeout() throws SQLException {
-        requireInitialization();
-        return this.dataSource.getLoginTimeout();
-    }
-
-    @Override
-    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        requireInitialization();
-        return this.dataSource.getParentLogger();
-    }
 
     private HikariDataSource dataSource;
     private HikariPoolMXBean jmxBean;
@@ -246,9 +194,9 @@ public class DataSourceWrapper implements DataSource {
         if (activeConnections > maxActiveConnections) {
             maxActiveConnections = activeConnections;
             log.debug("Used/Maximum connections from Pool '{}'/'{}' Tread: {}",
-//                    dataSource.getActiveConnections(), dataSource.getMaxConnections());
-                    jmxBean.getActiveConnections(), 
-                    jmxBean.getTotalConnections(), 
+//                    dataSource.getActiveConnections(), dataSource.getMaxConnections(),
+                    jmxBean.getActiveConnections(),
+                    jmxBean.getTotalConnections(),
                     Thread.currentThread().getName());
         }
         return con;
@@ -256,6 +204,59 @@ public class DataSourceWrapper implements DataSource {
 
     public String getUrl() {
         return dbUrl;
+    }
+
+    @Override
+    public Connection getConnection(String username, String password) {
+        throw new UnsupportedOperationException("Cannot get connection using different username and password instead of default");
+    }
+
+    @Override
+    public <T> T unwrap(Class<T> iface) throws SQLException {
+        requireInitialization();
+        return dataSource.unwrap(iface);
+    }
+
+    private void requireInitialization() {
+        if (!initialized) {
+            throw new DbException(DB_INITIALIZATION_ERROR_TEXT);
+        }
+    }
+
+    @Override
+    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+        requireInitialization();
+        return dataSource.isWrapperFor(iface);
+    }
+
+    @Override
+    public PrintWriter getLogWriter() throws SQLException {
+        requireInitialization();
+        return this.dataSource.getLogWriter();
+    }
+
+    @Override
+    public void setLogWriter(PrintWriter out) throws SQLException {
+        requireInitialization();
+        this.dataSource.setLogWriter(out);
+    }
+
+    @Override
+    public void setLoginTimeout(int seconds) throws SQLException {
+        requireInitialization();
+        this.dataSource.setLoginTimeout(seconds);
+    }
+
+    @Override
+    public int getLoginTimeout() throws SQLException {
+        requireInitialization();
+        return this.dataSource.getLoginTimeout();
+    }
+
+    @Override
+    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        requireInitialization();
+        return this.dataSource.getParentLogger();
     }
 
 }

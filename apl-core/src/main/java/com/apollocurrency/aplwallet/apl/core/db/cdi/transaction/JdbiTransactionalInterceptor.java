@@ -33,6 +33,9 @@ public class JdbiTransactionalInterceptor {
         Transactional annotation = ctx.getMethod().getAnnotation(Transactional.class);
         Transaction annotation2 = ctx.getMethod().getAnnotation(Transaction.class);
 
+        boolean isAnnotatedReadOnly = (annotation != null && annotation.readOnly())
+                || (annotation2 != null && annotation2.readOnly());
+
         jdbiHandleFactory.open();
 
         try {
@@ -40,8 +43,7 @@ public class JdbiTransactionalInterceptor {
 
             Object result = ctx.proceed();
 
-            if ( (annotation != null && annotation.readOnly())
-                || (annotation2 != null && annotation2.readOnly()) ) {
+            if (isAnnotatedReadOnly) {
                 jdbiHandleFactory.rollback();
             } else {
                 jdbiHandleFactory.commit();

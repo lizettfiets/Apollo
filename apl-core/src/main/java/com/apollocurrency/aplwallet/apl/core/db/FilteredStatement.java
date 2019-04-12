@@ -31,6 +31,7 @@ import static org.slf4j.LoggerFactory.getLogger;
  *
  * The wrapper forwards all methods to the wrapped statement
  */
+@Deprecated
 public class FilteredStatement implements Statement {
     private static final Logger log = getLogger(FilteredStatement.class);
 

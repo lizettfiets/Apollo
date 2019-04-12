@@ -46,8 +46,7 @@ import javax.inject.Inject;
 public class TransactionalDataSource extends DataSourceWrapper implements TableCache, TransactionManagement {
     private static final Logger log = getLogger(TransactionalDataSource.class);
 
-    // TODO: YL remove static instance later
-    private FilteredFactoryImpl factory;
+    private WrappedStatementFactoryImpl factory;
 
     private long stmtThreshold;
     private long txThreshold;
@@ -86,7 +85,7 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
         this.txThreshold = txThreshold;
         this.txInterval = txInterval;
         this.enableSqlLogs = enableSqlLogs;
-        this.factory = new FilteredFactoryImpl(stmtThreshold);
+        this.factory = new WrappedStatementFactoryImpl(stmtThreshold);
         this.dbIdentity = dbProperties.getDbIdentity();
     }
 
@@ -98,7 +97,7 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
      */
     @Override
     public Connection getConnection() throws SQLException {
-        Connection con = localConnection.get();
+        DbConnectionWrapper con = localConnection.get();
         if (con != null /*&& !con.isClosed() && !super.getConnection().isClosed()*/) {
             return enableSqlLogs ? new ConnectionSpy(con) : con;
         }
@@ -162,12 +161,13 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
      */
     @Override
     public void commit(boolean closeConnection) {
-        DbConnectionWrapper con = localConnection.get();
-        if (con == null) {
+        DbConnectionWrapper wrCon = localConnection.get();
+        if (wrCon == null) {
             throw new IllegalStateException("Not in transaction");
         }
         try {
-            con.doCommit();
+//            wrCon.doCommit();
+            wrCon.commit();
             cleanupTransactionCallback(TransactionCallback::commit);
         } catch (SQLException e) {
             log.error("Commit data error with close = '{}'", closeConnection, e);
@@ -192,12 +192,13 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
      */
     @Override
     public void rollback(boolean closeConnection) {
-        DbConnectionWrapper con = localConnection.get();
-        if (con == null) {
+        DbConnectionWrapper wrCon = localConnection.get();
+        if (wrCon == null) {
             throw new IllegalStateException("Not in transaction");
         }
         try {
-            con.doRollback();
+//            con.doRollback();
+            wrCon.rollback();
         } catch (SQLException e) {
             log.error("Rollback data error with close = '{}'", closeConnection, e);
             throw new RuntimeException(e.toString(), e);
@@ -222,14 +223,14 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
      * internal resources clean up.
      */
     private void endTransaction() {
-        Connection con = localConnection.get();
-        if (con == null) {
+        DbConnectionWrapper wrCon = localConnection.get();
+        if (wrCon == null) {
             throw new IllegalStateException("Not in transaction");
         }
         localConnection.set(null);
         transactionCaches.set(null);
         long now = System.currentTimeMillis();
-        long elapsed = now - ((DbConnectionWrapper)con).txStart;
+        long elapsed = now - wrCon.txStart;
         if (elapsed >= txThreshold) {
             logThreshold(String.format("Database transaction required %.3f seconds",
                                        (double)elapsed/1000.0/*, blockchain.getHeight()*/));
@@ -250,7 +251,7 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
                 log.debug(String.format("Average database transaction time is %.3f seconds",
                                                      (double)times/1000.0/(double)count));
         }
-        DbUtils.close(con);
+        DbUtils.close(wrCon);
     }
 
     /**
@@ -301,7 +302,7 @@ public class TransactionalDataSource extends DataSourceWrapper implements TableC
         transactionCaches.get().values().forEach(Map::clear);
     }
 
-    private static void logThreshold(String msg) {
+    private void logThreshold(String msg) {
         StringBuilder sb = new StringBuilder(512);
         sb.append(msg).append('\n');
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
