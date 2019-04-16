@@ -9,6 +9,7 @@ import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.config.DaoConfig;
 import com.apollocurrency.aplwallet.apl.core.db.BlockDaoImpl;
 import com.apollocurrency.aplwallet.apl.core.db.DatabaseManager;
+import com.apollocurrency.aplwallet.apl.core.db.DbIterator;
 import com.apollocurrency.aplwallet.apl.core.db.DerivedDbTablesRegistryImpl;
 import com.apollocurrency.aplwallet.apl.core.db.cdi.transaction.JdbiHandleFactory;
 import com.apollocurrency.aplwallet.apl.core.db.dao.TransactionIndexDao;
@@ -112,6 +113,21 @@ class BlockchainTest {
         boolean hasTransaction = blockchain.hasTransaction(testData.TRANSACTION_1.getId());
         assertTrue(hasTransaction);
     }
+
+    @Test
+    void getBlocks() {
+        blockchain.setLastBlock(blockTestData.BLOCK_7);
+        DbIterator<Block> blocks = blockchain.getBlocks(blockTestData.BLOCK_0.getHeight(), blockTestData.BLOCK_7.getHeight());
+        assertNotNull(blocks);
+        int count = 0;
+        while (blocks.hasNext()) {
+            blocks.next();
+            count++;
+        }
+        assertEquals(8, count);
+    }
+
+
 
 /*
     // COMMENTED OUT tests because they still creates Weld container and do not shutdown it!!!

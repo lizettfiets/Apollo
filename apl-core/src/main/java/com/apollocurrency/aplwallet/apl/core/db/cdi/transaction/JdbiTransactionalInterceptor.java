@@ -36,7 +36,7 @@ public class JdbiTransactionalInterceptor {
         boolean isAnnotatedReadOnly = (annotation != null && annotation.readOnly())
                 || (annotation2 != null && annotation2.readOnly());
 
-        jdbiHandleFactory.open();
+        jdbiHandleFactory.open(isAnnotatedReadOnly);
 
         try {
             jdbiHandleFactory.begin();

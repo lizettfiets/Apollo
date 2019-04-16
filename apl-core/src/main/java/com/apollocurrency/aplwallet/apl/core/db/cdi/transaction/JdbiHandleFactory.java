@@ -17,6 +17,7 @@ public class JdbiHandleFactory {
     private static final Logger log = getLogger(JdbiHandleFactory.class);
 
     private final static ThreadLocal<Handle> currentHandleThreadLocal = new ThreadLocal<>();
+    private final static ThreadLocal<Boolean> isReadOnly = new ThreadLocal<>();
 
     private Jdbi jdbi;
 
@@ -33,24 +34,27 @@ public class JdbiHandleFactory {
     public Handle getCurrentHandle() {
         Handle handle = currentHandleThreadLocal.get();
         if (handle == null) {
-            handle = open();
+            handle = open(isReadOnly.get() != null ? isReadOnly.get() : false);
         }
         return handle;
     }
 
-    public Handle open() {
+    public Handle open(boolean isAnnotatedReadOnly) {
         Handle handle = currentHandleThreadLocal.get();
         if (handle != null) {
             return handle;
         }
         handle = jdbi.open();
+        handle.setReadOnly(isAnnotatedReadOnly);
         currentHandleThreadLocal.set(handle);
+        isReadOnly.set(isAnnotatedReadOnly ? Boolean.TRUE : Boolean.FALSE);
         return handle;
     }
 
     protected void begin() {
         Handle handle = getCurrentHandle();
         handle.begin();
+        isReadOnly.set(Boolean.FALSE);
     }
 
     protected void commit() {
@@ -65,8 +69,11 @@ public class JdbiHandleFactory {
 
     public void close() {
         Handle handle = getCurrentHandle();
-        handle.close();
+        if (!handle.isClosed()) {
+            handle.close();
+        }
         currentHandleThreadLocal.remove();
+        isReadOnly.remove();
     }
 
 }

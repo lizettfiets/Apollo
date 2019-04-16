@@ -133,7 +133,7 @@ public class DbMigrationExecutorTest {
         Assertions.assertEquals("false", dbMigrated);
         Assertions.assertTrue(Files.exists(h2DbInfoExtractor.getPath(pathToDbForMigration.toAbsolutePath().toString())));
         Assertions.assertThrows(ConnectionException.class, () -> jdbi.open());
-        Handle handle = jdbiHandleFactory.open();
+        Handle handle = jdbiHandleFactory.open(false);
         handle.execute("select 1");
         jdbiHandleFactory.close();
         databaseManager.shutdown();
@@ -154,7 +154,7 @@ public class DbMigrationExecutorTest {
         Assertions.assertEquals("false", dbMigrated);
         Assertions.assertFalse(Files.exists(h2DbInfoExtractor.getPath(pathToDbForMigration.toAbsolutePath().toString())));
         Assertions.assertThrows(ConnectionException.class, () -> jdbi.open());
-        Handle handle = jdbiHandleFactory.open();
+        Handle handle = jdbiHandleFactory.open(true);
         handle.execute("select 1");
         jdbiHandleFactory.close();
         databaseManager.shutdown();

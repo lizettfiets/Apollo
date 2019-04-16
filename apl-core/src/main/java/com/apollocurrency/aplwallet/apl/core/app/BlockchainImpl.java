@@ -132,6 +132,7 @@ public class BlockchainImpl implements Blockchain {
     }
 */
 
+    @Transactional(readOnly = true)
     @Override
     public DbIterator<Block> getBlocks(int from, int to) {
         int blockchainHeight = getHeight();
