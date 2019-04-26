@@ -137,7 +137,7 @@ public class DexOfferTransaction extends DEX {
 
     @Override
     public String getName() {
-        return "CreateOrder";
+        return "DexOrder";
     }
 
 
